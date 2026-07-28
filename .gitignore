@@ -1,0 +1,70 @@
+# ---- Data: NEVER commit geospatial data (rasters/vectors are huge) ----
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
+*.tif
+*.tiff
+*.jp2
+*.nc
+*.zarr/
+*.grib
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.geojson
+*.parquet
+# allow small config/sample geojson explicitly if needed:
+!config/*.geojson
+
+# ---- Secrets / credentials ----
+.env
+.env.*
+*.key
+credentials.json
+service-account*.json
+config/secrets.*
+~/.config/earthengine
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.uv/
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- OS / editor ----
+.DS_Store
+.vscode/
+.idea/
+
+# Local run logs
+logs/
+
+# ---- Working files kept local, not published ----
+# Agent/session instructions and internal planning
+CLAUDE.md
+PHASE3_PLAN.md
+# NotebookLM progress notes (internal running log)
+docs/*_notebooklm_note.md
+# Narrative scaffolding for the board / city email / manuscript
+docs/CORE_NARRATIVE.md
+# Standalone teaching sandboxes, unrelated to the pipeline
+docs/bilinear_interpolation.html
+docs/ml_pipeline_explorer.html
+
+# ---- Manuscript ----
+# The paper is not published from this repository. It goes to a preprint
+# server; the README links the DOI once posted. Keeping a draft here would
+# put an unposted, still-revising manuscript in public and create a second
+# copy to drift out of sync with the version of record.
+# This repo is the code + data + deliverable companion the paper describes.
+docs/preprint/
