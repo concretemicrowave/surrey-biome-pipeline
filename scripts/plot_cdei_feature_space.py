@@ -20,22 +20,26 @@ import matplotlib
 
 matplotlib.use("Agg")
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.gridspec import GridSpec
 
-from src.pipeline import paths
+from src.pipeline import paths, viz
 
-# Palette — chart chrome and ink from the validated reference instance.
-SURFACE = "#fcfcfb"
-INK = "#0b0b0b"
-INK_2 = "#52514e"
-MUTED = "#898781"
-GRID = "#e1e0d9"
-AXIS = "#c3c2b7"
-SERIES = "#2a78d6"   # categorical slot 1 — the corridor-summers
-EDGE = "#d03b3b"     # status:critical — the dry edge is a "maximally stressed" limit
+# Palette lives in src/pipeline/viz.py so this script and corridor_stress.py
+# cannot drift apart again — they previously carried two near-identical reds
+# and two near-identical near-blacks, which reads as a mistake.
+SURFACE = viz.SURFACE
+INK = viz.INK
+INK_2 = viz.INK_2
+MUTED = viz.MUTED
+GRID = viz.GRID
+AXIS = viz.AXIS
+SERIES = viz.SERIES     # categorical slot 1 — the corridor-summers
+EDGE = viz.CRITICAL     # status:critical — the dry edge is a "maximally stressed" limit
 
 OUT = paths.DOCS / "figures" / "cdei_feature_space.png"
 
@@ -52,7 +56,7 @@ def _style(ax):
     ax.tick_params(colors=MUTED, labelsize=9, length=0)
 
 
-def main() -> None:
+def main(out: Path = OUT, *, standalone: bool = True) -> None:
     df = pd.read_parquet(paths.FEATURES)
     a = float(df["dry_edge_a"].iloc[0])
     b = float(df["dry_edge_b"].iloc[0])
@@ -143,13 +147,25 @@ def main() -> None:
             axs.set_yticklabels([])
         tops.append(axs.get_position().y1)
 
-    fig.text(0.075, 0.965, "How CDEI is measured", color=INK, fontsize=19,
-             fontweight="bold", ha="left", va="top")
-    fig.text(0.075, 0.928,
+    # The title is baked in only for the standalone PNG (the README embeds it
+    # under a caption of its own, but the image also gets read on its own). In
+    # the manuscript a LaTeX caption already carries the title, and repeating it
+    # is the most-flagged figure fault in review — so it is dropped and the
+    # remaining blocks slide up into the space it occupied.
+    if standalone:
+        fig.text(0.075, 0.965, "How CDEI is measured", color=INK, fontsize=19,
+                 fontweight="bold", ha="left", va="top")
+        y_sub, y_meta = 0.928, 0.876
+    else:
+        y_sub, y_meta = 0.965, 0.913
+
+    # The explanatory line stays in both: it explains the construction rather
+    # than restating the caption, and the figure is unreadable without it.
+    fig.text(0.075, y_sub,
              "Every corridor-summer placed by greenness against canopy water. Distance from the fitted dry edge is how far it sits\n"
              "from being as dry as its greenness allows — that distance, divided by relative warmth, is CDEI.",
              color=INK_2, fontsize=11, ha="left", va="top", linespacing=1.6)
-    fig.text(0.075, 0.876,
+    fig.text(0.075, y_meta,
              f"{len(df)} corridor-summers  ·  153 Surrey GIN corridors × {len(years)} summers  ·  "
              "dry edge fitted by assemble.dry_edge (12 NDVI bins, 5th percentile)  ·  "
              "corridors cluster in the closed-canopy end, where the wet-to-dry range is narrowest",
@@ -159,12 +175,20 @@ def main() -> None:
              "while the spread between corridors stays put.",
              color=INK_2, fontsize=10.5, ha="left", va="bottom")
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT, facecolor=SURFACE, bbox_inches="tight", pad_inches=0.28)
-    print(f"wrote {OUT}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, facecolor=SURFACE, bbox_inches="tight", pad_inches=0.28)
+    print(f"wrote {out}")
     print(f"  dry edge: SWCI = {a:.4f} + {b:.4f} * NDVI")
     print(f"  rows {len(df)}  years {years}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("-o", "--out", type=Path, default=OUT)
+    p.add_argument("--no-title", action="store_true",
+                   help="omit the baked-in title, for the manuscript where a "
+                        "LaTeX caption already carries it")
+    a = p.parse_args()
+    main(a.out, standalone=not a.no_title)

@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import paths
+from . import paths, viz
 
 logger = logging.getLogger(__name__)
 
@@ -96,51 +96,73 @@ def build_table(features_path: Path, corridors_gpkg: Path) -> "pd.DataFrame":
 # --------------------------------------------------------------------------- #
 def _style():
     import matplotlib.pyplot as plt
-    plt.rcParams.update({
-        "figure.dpi": 130, "savefig.dpi": 200, "font.size": 11,
-        "axes.spines.top": False, "axes.spines.right": False,
-        "axes.titlesize": 13, "axes.titleweight": "bold",
-        "figure.facecolor": "white", "axes.facecolor": "white",
-    })
+    plt.rcParams.update(viz.rcparams())
 
 
-def fig_stress_map(gdf, out_path: Path, top_n: int = 8):
+def _warning_note(ax, y: float, *, fontsize: float = 8.5, ha: str = "center",
+                  x: float = 0.5) -> None:
+    """The exploratory-ranking caveat, drawn as glyph + sentence.
+
+    Set in ink rather than in red. The caveat is a status, not a data series,
+    and these figures put it directly beneath a red sequential ramp \u2014 a red
+    sentence there reads as a legend entry. The warning glyph carries the
+    status, which also means the caveat survives greyscale printing and
+    colourblind readers in a way colour alone would not.
+    """
+    ax.text(x, y, f"\u26a0  {viz.EXPLORATORY_NOTE}", transform=ax.transAxes,
+            ha=ha, va="top", fontsize=fontsize, color=viz.INK_2, zorder=9)
+
+
+def fig_stress_map(gdf, out_path: Path, top_n: int = 8, *, standalone: bool = True):
+    """Choropleth of corridors by stress percentile.
+
+    ``standalone=True`` bakes a title into the image, for the deliverable PNG a
+    planner opens on its own. ``standalone=False`` omits it, for the manuscript
+    where a LaTeX caption already carries the title and repeating it is the
+    single most-flagged figure fault in review. Everything else, including the
+    exploratory-data caveat, is identical in both.
+    """
     import matplotlib.pyplot as plt
 
     _style()
     fig, ax = plt.subplots(figsize=(9, 10))
     # Faint context: all corridors outlined.
-    gdf.plot(ax=ax, facecolor="none", edgecolor="#d9d9d9", linewidth=0.4)
+    gdf.plot(ax=ax, facecolor="none", edgecolor=viz.CONTEXT, linewidth=0.4)
     # Choropleth by stress percentile.
     gdf.plot(ax=ax, column="stress_pctile", cmap=STRESS_CMAP, linewidth=0.3,
-             edgecolor="#7f7f7f", legend=True,
+             edgecolor=viz.POLY_EDGE, legend=True,
              legend_kwds={"label": "Water-stress percentile  (100 = most stressed)",
                           "shrink": 0.5, "pad": 0.01})
     # Mark + rank-label the most-stressed corridors.
     top = gdf.nsmallest(top_n, "stress_rank")
     cent = top.geometry.representative_point()
-    ax.scatter(cent.x, cent.y, s=90, facecolor="none", edgecolor="#1a1a1a",
+    ax.scatter(cent.x, cent.y, s=90, facecolor="none", edgecolor=viz.INK,
                linewidth=1.6, zorder=5)
     for r, (x, y) in zip(top["stress_rank"], zip(cent.x, cent.y)):
         ax.annotate(f"#{r}", (x, y), xytext=(6, 6), textcoords="offset points",
-                    fontsize=10, fontweight="bold", color="#1a1a1a", zorder=6)
-    ax.set_title("Surrey corridors by canopy water-stress signal (CDEI)", pad=16)
-    ax.text(0.0, 1.005, "153 Green-Infrastructure corridors · mean summer 2022–2025 · "
-            "circled = 8 highest-signal", transform=ax.transAxes, fontsize=9.5, color="#555")
-    ax.set_axis_off()
+                    fontsize=10, fontweight="bold", color=viz.INK, zorder=6)
+    if standalone:
+        ax.set_title("Surrey corridors by canopy water-stress signal (CDEI)", pad=16)
+    ax.text(0.0, 1.005, f"153 Green-Infrastructure corridors · mean summer 2022–2025 · "
+            f"circled = {top_n} highest-signal", transform=ax.transAxes,
+            fontsize=9.5, color=viz.INK_2)
     ax.set_aspect("equal")
-    ax.text(0.5, -0.02, "⚠ Exploratory: between-corridor ranking is confounded with canopy "
-            "density, not independently validated (see README)",
-            transform=ax.transAxes, ha="center", fontsize=8.5, color="#b30000")
-    ax.text(0.5, -0.04, "CDEI from Sentinel-2 + Landsat · EPSG:26910",
-            transform=ax.transAxes, ha="center", fontsize=8, color="#999")
+    # Spatial reference. A published map without these is non-standard, and
+    # set_axis_off() removes the coordinate ticks that would otherwise serve.
+    # Both read the axis limits, so they must be drawn before the axis is hidden.
+    viz.scale_bar(ax)
+    viz.north_arrow(ax)
+    ax.set_axis_off()
+    _warning_note(ax, -0.02)
+    ax.text(0.5, -0.05, "CDEI from Sentinel-2 + Landsat · EPSG:26910 (UTM 10N), grid north",
+            transform=ax.transAxes, ha="center", va="top", fontsize=8, color=viz.MUTED)
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
     logger.info("wrote %s", out_path)
 
 
-def fig_top_ranking(gdf, out_path: Path, top_n: int = 20):
+def fig_top_ranking(gdf, out_path: Path, top_n: int = 20, *, standalone: bool = True):
     import matplotlib.pyplot as plt
     from matplotlib import colors
 
@@ -156,15 +178,15 @@ def fig_top_ranking(gdf, out_path: Path, top_n: int = 20):
                                         top["ecological_value"], top["priority"])):
         tag = f"{ev or '—'} value{'   ' + pr if pr else ''}"
         ax.text(min(p + 1.2, 99), y, tag, va="center", fontsize=8.5,
-                color="#333" if not pr else "#b30000",
+                color=viz.INK if pr else viz.INK_2,
                 fontweight="bold" if pr else "normal")
     ax.set_xlim(0, 108)
     ax.set_xlabel("Canopy water-stress signal percentile  (100 = highest signal)")
-    ax.set_title(f"Surrey's {top_n} highest canopy-stress-signal corridors", pad=30)
+    if standalone:
+        ax.set_title(f"Surrey's {top_n} highest canopy-stress-signal corridors", pad=30)
     ax.text(0.0, 1.028, "★ = also high ecological value or development risk (candidate priority)",
-            transform=ax.transAxes, fontsize=9.5, color="#555")
-    ax.text(0.0, 1.006, "⚠ Exploratory ranking — confounded with canopy density, not yet validated (see README)",
-            transform=ax.transAxes, fontsize=8.5, color="#b30000")
+            transform=ax.transAxes, fontsize=9.5, color=viz.INK_2)
+    _warning_note(ax, 1.016, ha="left", x=0.0)
     ax.tick_params(axis="y", length=0)
     ax.margins(y=0.01)
     fig.tight_layout()
@@ -173,7 +195,7 @@ def fig_top_ranking(gdf, out_path: Path, top_n: int = 20):
     logger.info("wrote %s", out_path)
 
 
-def fig_dry_edge(features_path: Path, out_path: Path):
+def fig_dry_edge(features_path: Path, out_path: Path, *, standalone: bool = True):
     """The 'how it works' figure — CDEI is distance from the NDVI–SWCI dry edge."""
     import matplotlib.pyplot as plt
     from matplotlib import colors
@@ -188,17 +210,19 @@ def fig_dry_edge(features_path: Path, out_path: Path):
 
     fig, ax = plt.subplots(figsize=(8.5, 6.2))
     sc = ax.scatter(cm_["ndvi"], cm_["swci"], c=stress, cmap=STRESS_CMAP,
-                    s=42, edgecolor="#888", linewidth=0.4, norm=colors.Normalize(0, 100))
+                    s=42, edgecolor=viz.POLY_EDGE, linewidth=0.4,
+                    norm=colors.Normalize(0, 100))
     if a is not None:
         xs = np.linspace(cm_["ndvi"].min(), cm_["ndvi"].max(), 50)
-        ax.plot(xs, a + b * xs, "--", color="#1a1a1a", lw=2,
+        ax.plot(xs, a + b * xs, "--", color=viz.INK, lw=2,
                 label=f"dry edge  (SWCI = {a:.2f} + {b:.2f}·NDVI)")
         ax.legend(loc="upper left", fontsize=9)
     ax.set(xlabel="NDVI (greenness)", ylabel="SWCI (canopy water content)")
-    ax.set_title("How corridor water stress is measured", pad=26)
+    if standalone:
+        ax.set_title("How corridor water stress is measured", pad=26)
     ax.text(0.0, 1.008, "Each dot = one corridor. Distance ABOVE the dry edge = water margin; "
             "corridors near the line are stressed.", transform=ax.transAxes,
-            fontsize=9, color="#555")
+            fontsize=9, color=viz.INK_2)
     cb = fig.colorbar(sc, ax=ax, shrink=0.8)
     cb.set_label("stress percentile")
     fig.tight_layout()
@@ -208,7 +232,15 @@ def fig_dry_edge(features_path: Path, out_path: Path):
 
 
 def run(features_path: Path = paths.FEATURES, corridors_gpkg: Path = CORRIDORS,
-        out_dir: Path = OUT_DIR) -> "pd.DataFrame":
+        out_dir: Path = OUT_DIR, *,
+        manuscript_dir: Path | None = None) -> "pd.DataFrame":
+    """Build the ranking table and its figures.
+
+    ``manuscript_dir``, if given, additionally writes untitled copies of the two
+    figures the paper uses. The manuscript lives outside this repository, so the
+    path is passed in rather than hardcoded, and nothing is written there by
+    default.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     gdf = build_table(features_path, corridors_gpkg)
 
@@ -222,6 +254,11 @@ def run(features_path: Path = paths.FEATURES, corridors_gpkg: Path = CORRIDORS,
     fig_stress_map(gdf, out_dir / "fig1_stress_map.png")
     fig_top_ranking(gdf, out_dir / "fig2_top_ranking.png")
     fig_dry_edge(features_path, out_dir / "fig3_dry_edge.png")
+
+    if manuscript_dir is not None:
+        manuscript_dir.mkdir(parents=True, exist_ok=True)
+        fig_stress_map(gdf, manuscript_dir / "fig2-stress-map.png", standalone=False)
+        fig_dry_edge(features_path, manuscript_dir / "fig3-dry-edge.png", standalone=False)
     return gdf
 
 
@@ -230,11 +267,15 @@ def main() -> None:
     p.add_argument("--features", type=Path, default=paths.FEATURES)
     p.add_argument("--corridors", type=Path, default=CORRIDORS)
     p.add_argument("--out-dir", type=Path, default=OUT_DIR)
+    p.add_argument("--manuscript-figures", type=Path, default=None,
+                   help="also write untitled copies here, for the preprint "
+                        "(the caption carries the title there)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING,
                         format="%(levelname)s %(name)s: %(message)s")
-    gdf = run(args.features, args.corridors, args.out_dir)
+    gdf = run(args.features, args.corridors, args.out_dir,
+              manuscript_dir=args.manuscript_figures)
 
     print("=" * 70)
     print("Surrey GIN corridor water-stress ranking — most-stressed first")
