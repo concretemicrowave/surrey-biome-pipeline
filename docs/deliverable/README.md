@@ -7,12 +7,13 @@ can and cannot yet claim**, after independent multi-sensor validation.
 **The research question was:** does scale-free downscaled climate data
 predict corridor water stress better than free coarse climate? **Answer (Phases
 1-3b): no** — corridor stress is spatial and local, decoupled from the flat
-municipal climate gradient. **So we skip the climate product and measure stress
-directly from satellite imagery** (the CDEI index, built from Sentinel-2 + Landsat).
+municipal climate gradient. **So the climate product is skipped and stress is
+measured directly from satellite imagery** (the CDEI index, built from
+Sentinel-2 + Landsat).
 
 ## ⚠️ What validation showed (read this first)
 
-We did not stop at building the index — we tested whether it is *true* by comparing
+I did not stop at building the index — I tested whether it is *true* by comparing
 it against independent measurements. The two axes came out very differently:
 
 - **Over TIME — a direction check, not yet a validation.** CDEI tracks independent

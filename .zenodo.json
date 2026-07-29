@@ -1,0 +1,31 @@
+{
+  "upload_type": "software",
+  "title": "surrey-biome-pipeline: a two-extent test of scale-free climate downscaling against polygon-scale water stress",
+  "version": "1.0.0",
+  "language": "eng",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Wang, Joshua",
+      "affiliation": "Fraser Heights Secondary, Surrey, British Columbia, Canada",
+      "orcid": "0009-0002-0471-8792"
+    }
+  ],
+  "description": "<p>Code, method and applied output for a controlled test of whether high-resolution &quot;scale-free&quot; downscaled climate data (ClimateBC) predicts polygon-scale vegetation water stress better than the same variables degraded to a coarse regional-model grid.</p><p>The test was run at two spatial extents. Over the City of Surrey's 153 Green Infrastructure Network corridors it was inconclusive for structural reasons: coarsening to 4 km removed only 12.3% of the predictors' spatial variance, and the climate predictors varied mostly between years while water stress varied mostly between corridors. Repeated on a 100 km Fraser Valley elevation transect spanning 4-1,920 m (300 forest stands x 4 summers), the contrast became measurable (48.4% of spatial variance removed at 25 km) and the result reversed: the coarse model significantly outperformed the scale-free one, with the paired confidence interval excluding zero at two cell sizes and in 32 of 32 random seeds. Neither model reached usable skill. Stand water stress proved near-orthogonal to the macroclimate gradient; only local terrain and stand structure reached positive cross-validated skill.</p><p>The repository also contains the applied deliverable built after the resolution approach was shown not to work: CDEI, a Sentinel-2 and Landsat index of polygon water stress, mapped and ranked across Surrey's corridors and checked independently against Sentinel-1 radar and against ClimateBC moisture variables.</p><p>Pipeline modules under src/pipeline/ each expose an importable API and a command-line entry point; walkthrough notebooks under notebooks/ reproduce each stage end to end. All randomness is seeded (seed 26910). Source data are public and are not redistributed here; every input is regenerable from the pipeline.</p><p>A manuscript describing this work is in preparation for a preprint server. It has not been posted, submitted or peer reviewed.</p>",
+  "keywords": [
+    "climate downscaling",
+    "spatial resolution",
+    "water stress",
+    "green infrastructure",
+    "remote sensing",
+    "Sentinel-2",
+    "Landsat",
+    "Sentinel-1 SAR",
+    "ClimateBC",
+    "random forest",
+    "spatial cross-validation",
+    "British Columbia"
+  ],
+  "notes": "Generative AI tools were used in preparing this work and are disclosed in the accompanying manuscript: they were used to scaffold code and draft technical prose, which the author then revised, and as an adversarial reviewer of drafted sections. The author designed the study, ran and verified every analysis, and is responsible for all content."
+}

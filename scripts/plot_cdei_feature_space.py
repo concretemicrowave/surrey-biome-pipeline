@@ -4,13 +4,14 @@ textbook LST/NDVI trapezoid.
 The published figure everyone cites puts land surface temperature on the y-axis,
 so its dry edge is the UPPER envelope and slopes down. This pipeline puts SWCI
 (shortwave-infrared water content) there instead, which inverts the picture: high
-SWCI means wet, so the dry edge is the LOWER envelope and slopes up. Drawing our
-own version avoids having to mentally flip a borrowed diagram every time.
+SWCI means wet, so the dry edge is the LOWER envelope and slopes up. Drawing a
+purpose-built version avoids having to mentally flip a borrowed diagram every
+time.
 
 Everything plotted is measured, not illustrative: 612 real corridor-summers and
 the dry edge actually fitted by ``assemble.dry_edge``.
 
-    .venv/bin/python scripts/plot_tvwsi_feature_space.py
+    .venv/bin/python scripts/plot_cdei_feature_space.py
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ AXIS = "#c3c2b7"
 SERIES = "#2a78d6"   # categorical slot 1 — the corridor-summers
 EDGE = "#d03b3b"     # status:critical — the dry edge is a "maximally stressed" limit
 
-OUT = paths.DOCS / "figures" / "tvwsi_feature_space.png"
+OUT = paths.DOCS / "figures" / "cdei_feature_space.png"
 
 
 def _style(ax):

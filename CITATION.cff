@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+message: "If you use this software or its outputs, please cite it as below."
+title: "surrey-biome-pipeline: a two-extent test of scale-free climate downscaling against polygon-scale water stress"
+abstract: >-
+  Code, method and applied output for a controlled test of whether
+  high-resolution "scale-free" downscaled climate data predicts polygon-scale
+  vegetation water stress better than the same variables degraded to a coarse
+  regional-model grid. Run at two extents: Surrey's 153 Green Infrastructure
+  Network corridors, where the contrast was too small to test the question, and
+  a 100 km Fraser Valley elevation transect, where the coarse model
+  significantly outperformed the scale-free one. Also contains CDEI, a
+  Sentinel-2 and Landsat index of polygon water stress, mapped and ranked
+  across Surrey's corridors and validated against independent radar and climate
+  data.
+type: software
+version: 1.0.0
+date-released: 2026-07-28
+license: MIT
+repository-code: "https://github.com/concretemicrowave/surrey-biome-pipeline"
+authors:
+  - family-names: Wang
+    given-names: Joshua
+    affiliation: "Fraser Heights Secondary, Surrey, British Columbia, Canada"
+    orcid: "https://orcid.org/0009-0002-0471-8792"
+keywords:
+  - climate downscaling
+  - spatial resolution
+  - water stress
+  - green infrastructure
+  - remote sensing
+  - Sentinel-2
+  - Landsat
+  - Sentinel-1 SAR
+  - ClimateBC
+  - random forest
+  - spatial cross-validation
+  - British Columbia

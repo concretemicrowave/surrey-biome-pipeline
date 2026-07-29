@@ -55,8 +55,8 @@ a null result.
 | Quantity | Value |
 |---|---|
 | Paired ΔRMSE (RMSE_A − RMSE_B), transect @ 25 km | **+0.00093**, 95% CI [+0.00021, +0.00170] |
-| Model A R² (scale-free) | −0.138 — materially worse than predicting the mean |
-| Model B R² (coarse) | +0.003 — merely matches the mean |
+| Model A R² (scale-free) @ 25 km | −0.138 — materially worse than predicting the mean |
+| Model B R² (coarse) @ 25 km | +0.003 — merely matches the mean |
 | Paired interval excludes zero | 32 of 32 runs, across two cell sizes and independent seeds |
 | Stand CDEI vs climate gradient | Spearman \|ρ\| ≤ 0.15 (n = 300) |
 | Terrain + stand structure, CV R² | **+0.029** (positive in 80% of folds, against climate's 40%) |
@@ -65,12 +65,44 @@ Neither model reached usable skill. The finding is about the **comparison** —
 fine-scale detail is an active hazard for this response while the coarse average
 is merely uninformative — not about either model being good.
 
+### Two caveats that belong next to those numbers
+
+The **paired difference** is what the conclusion rests on, and it is robust: it
+favours the coarse model at every cell size, seed and hyperparameter setting
+tested. The **categorical verdict label** is much less robust, in two ways that
+the reproduction commands below will show you directly.
+
+- **The label depends on the cell size.** The verdict rule requires
+  `max(R²_A, R²_B) > 0`, and Model B clears that by three thousandths at 25 km
+  but misses it by three thousandths at 12 km. So `seed_sensitivity.py 25000 20`
+  prints `FALSIFIED` 20 times and `seed_sensitivity.py 12000 12` prints
+  `INCONCLUSIVE` 12 times — while the paired ΔRMSE is +0.00093 and +0.00094
+  respectively, statistically indistinguishable. The gate is a convenience
+  threshold of my own construction, not a standard, and this is its weakest point.
+- **Significance depends on how hard the forest is allowed to overfit.** Across
+  eight hyperparameter settings the coarse model is better on the point estimate
+  in all eight, but the paired interval excludes zero in only six — heavy
+  regularisation closes the gap to indistinguishability, because Model A's
+  deficit is substantially overfitting to fine climate detail.
+
+Both are reported in full in [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md).
+The direction of the result does not depend on either, and is independently
+supported by the rank correlations and the explanatory analysis; the word
+"falsified" does.
+
 ## The response variable: CDEI
 
 Water stress is measured per polygon per summer as **CDEI**, computed from free
 imagery: NDVI and a shortwave-infrared canopy-water proxy (SWCI) from Sentinel-2,
 and land-surface temperature from Landsat 8/9. It adapts the dry-edge logic of the
 Temperature–Vegetation Dryness Index to an NDVI–SWCI feature space.
+
+![CDEI feature space: 612 corridor-summers plotted by greenness against canopy
+water, with the fitted dry edge](docs/figures/cdei_feature_space.png)
+
+*All 612 corridor-summers, with the dry edge as `assemble.dry_edge` actually fits
+it. Everything plotted is measured, not illustrative. Regenerate with
+`python scripts/plot_cdei_feature_space.py`.*
 
 The name is deliberate. An earlier version of this work called the index TVWSI
 (Temperature–Vegetation Water Stress Index) — a name that already belongs to

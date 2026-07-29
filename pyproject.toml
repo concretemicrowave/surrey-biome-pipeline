@@ -1,6 +1,8 @@
 [project]
 name = "surrey-biome-pipeline"
-version = "0.1.0"
+# Keep in step with CITATION.cff and .zenodo.json — all three are read as the
+# release version, and a Zenodo DOI freezes whatever they say at release time.
+version = "1.0.0"
 description = "Data acquisition + spatial merging pipeline for forecasting water stress in Surrey's Green Infrastructure Network corridors"
 requires-python = ">=3.11"
 dependencies = [
@@ -48,3 +50,19 @@ include = ["src*"]
 
 [tool.ruff]
 line-length = 100
+
+# The walkthrough notebooks are deliberately written in notebook idiom: imports
+# next to the cell that needs them, and `plt.tight_layout(); plt.show()` on one
+# line so a display incantation does not take two lines of a teaching cell.
+# Enforcing module conventions on them would make them worse to read, so the
+# relevant rules are switched off there rather than left failing.
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*.ipynb" = [
+    "E401",  # multiple imports on one line
+    "E402",  # module-level import not at top of file
+    "E701",  # multiple statements on one line (colon)
+    "E702",  # multiple statements on one line (semicolon)
+    "E703",  # statement ends with a semicolon
+    "E741",  # ambiguous variable name (l, I, O) — fine for a plotting loop
+    "F401",  # imported but unused — cells are run out of order
+]
