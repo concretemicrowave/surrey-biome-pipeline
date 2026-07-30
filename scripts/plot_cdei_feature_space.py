@@ -56,7 +56,24 @@ def _style(ax):
     ax.tick_params(colors=MUTED, labelsize=9, length=0)
 
 
-def main(out: Path = OUT, *, standalone: bool = True) -> None:
+def main(out: Path = OUT, *, standalone: bool = True, mode: str = "paper") -> None:
+    """Render the figure. ``mode="poster"`` raises print resolution only.
+
+    Unlike the ``corridor_stress`` figures, this one gets no type scaling. Its
+    annotations, callouts and three header blocks are hand-positioned in figure
+    coordinates against a GridSpec with explicit margins, so growing the type
+    relative to the canvas walks the labels into each other and into the small
+    multiples. Magnifying it uniformly — which is what a dpi bump amounts to —
+    is the honest option, and it is the one that fixes the actual print problem:
+    at 200 dpi this figure is 2300 px wide and prints soft at poster width,
+    where 600 dpi clears 300 ppi with room to spare.
+
+    That is also the right trade for this particular figure. Youth Science
+    Canada's poster guidance is to show "only the figures that show your key
+    results"; this is the dense methods diagram, so if it reaches a board at all
+    it belongs at a size a reader leans in for.
+    """
+    viz.set_mode(mode)
     df = pd.read_parquet(paths.FEATURES)
     a = float(df["dry_edge_a"].iloc[0])
     b = float(df["dry_edge_b"].iloc[0])
@@ -176,8 +193,11 @@ def main(out: Path = OUT, *, standalone: bool = True) -> None:
              color=INK_2, fontsize=10.5, ha="left", va="bottom")
 
     out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out, facecolor=SURFACE, bbox_inches="tight", pad_inches=0.28)
-    print(f"wrote {out}")
+    # dpi passed explicitly: this figure sets dpi on the Figure, so the default
+    # savefig.dpi="figure" would inherit 200 and ignore the mode entirely.
+    fig.savefig(out, facecolor=SURFACE, bbox_inches="tight", pad_inches=0.28,
+                dpi=viz.save_dpi())
+    print(f"wrote {out}  (mode: {viz.get_mode()}, {viz.save_dpi()} dpi)")
     print(f"  dry edge: SWCI = {a:.4f} + {b:.4f} * NDVI")
     print(f"  rows {len(df)}  years {years}")
 
@@ -190,5 +210,7 @@ if __name__ == "__main__":
     p.add_argument("--no-title", action="store_true",
                    help="omit the baked-in title, for the manuscript where a "
                         "LaTeX caption already carries it")
+    p.add_argument("--mode", choices=viz.MODES, default="paper",
+                   help="'poster' raises print resolution to 600 dpi; default 'paper'")
     a = p.parse_args()
-    main(a.out, standalone=not a.no_title)
+    main(a.out, standalone=not a.no_title, mode=a.mode)
