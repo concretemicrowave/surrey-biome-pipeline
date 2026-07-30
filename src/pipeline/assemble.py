@@ -120,20 +120,67 @@ def dry_edge(ndvi: np.ndarray, swci: np.ndarray, *, n_bins: int = 12,
     return float(a), float(b)
 
 
+def frozen_reference(path: Path) -> tuple[tuple[float, float], pd.Series]:
+    """Read the dry edge and per-corridor RLST baseline out of an existing panel.
+
+    Both quantities in :func:`compute_tvwsi` are properties of *the panel they
+    were computed on*, not of any single corridor-year: the dry edge is fitted
+    across every row, and the RLST baseline is each corridor's mean over exactly
+    the summers present. Adding summers to the panel therefore moves both, and
+    every CDEI value in it — including the ones already reported — changes.
+
+    Freezing them against a reference panel is what makes the record extendable
+    without rewriting what has already been published from it. Values for the
+    new summers become an out-of-sample application of a fixed index definition,
+    which is a stronger claim than a refit, not a weaker one.
+    """
+    ref = pd.read_parquet(path)
+    for col in ("dry_edge_a", "dry_edge_b", "lst_k", CORRIDOR_ID):
+        if col not in ref.columns:
+            raise ValueError(f"{path} is not a usable reference panel: no {col!r}")
+    edge = (float(ref["dry_edge_a"].iloc[0]), float(ref["dry_edge_b"].iloc[0]))
+    baseline = ref.groupby(CORRIDOR_ID)["lst_k"].mean()
+    logger.info("frozen reference from %s: edge SWCI = %.4f + %.4f * NDVI, "
+                "RLST baseline over %d corridors x summers %s",
+                path.name, edge[0], edge[1], len(baseline),
+                sorted(ref["year"].unique()))
+    return edge, baseline
+
+
 def compute_tvwsi(df: pd.DataFrame, *, n_bins: int = 12, q: float = 0.05,
-                  min_per_bin: int = 8) -> pd.DataFrame:
-    """Add ``dry_dist``, ``rlst`` and ``tvwsi`` to a corridor x year table."""
+                  min_per_bin: int = 8,
+                  edge: tuple[float, float] | None = None,
+                  baseline: "pd.Series | None" = None) -> pd.DataFrame:
+    """Add ``dry_dist``, ``rlst`` and ``tvwsi`` to a corridor x year table.
+
+    ``edge`` and ``baseline``, when given, are used instead of being derived
+    from ``df`` — see :func:`frozen_reference` for why that matters. Passing
+    neither reproduces the original behaviour exactly.
+    """
     out = df.copy()
-    a, b = dry_edge(out["ndvi_mean"].to_numpy(), out["swci_mean"].to_numpy(),
-                    n_bins=n_bins, q=q, min_per_bin=min_per_bin)
+    if edge is None:
+        a, b = dry_edge(out["ndvi_mean"].to_numpy(), out["swci_mean"].to_numpy(),
+                        n_bins=n_bins, q=q, min_per_bin=min_per_bin)
+    else:
+        a, b = edge
+        logger.info("dry edge FROZEN at SWCI = %.4f + %.4f * NDVI (not refitted)", a, b)
     out["dry_edge_a"], out["dry_edge_b"] = a, b
     # Perpendicular distance to the line, signed positive on the wet side.
     out["dry_dist"] = (out["swci_mean"] - (a + b * out["ndvi_mean"])) / np.sqrt(1 + b ** 2)
 
     lst_k = out["lst_mean"] + KELVIN_TO_C
-    baseline = lst_k.groupby(out[CORRIDOR_ID]).transform("mean")
+    if baseline is None:
+        base = lst_k.groupby(out[CORRIDOR_ID]).transform("mean")
+    else:
+        base = out[CORRIDOR_ID].map(baseline)
+        if base.isna().any():
+            missing = sorted(out.loc[base.isna(), CORRIDOR_ID].unique())
+            raise ValueError(f"{len(missing)} corridors absent from the frozen "
+                             f"RLST baseline, e.g. {missing[:5]}")
+        logger.info("RLST baseline FROZEN over %d corridors (not recomputed)",
+                    base.nunique())
     out["lst_k"] = lst_k
-    out["rlst"] = lst_k / baseline
+    out["rlst"] = lst_k / base
     out["tvwsi"] = out["dry_dist"] / out["rlst"]
 
     spread = out["rlst"].max() - out["rlst"].min()
@@ -247,13 +294,23 @@ def run(
     years: tuple[int, ...] = (2022, 2023, 2024, 2025),
     climate_parquet: Path | None = None,
     corridor_layer: str = "corridors_analysis",
+    freeze_from: Path | None = None,
 ) -> pd.DataFrame:
+    """Build the corridor x summer ML table.
+
+    ``freeze_from`` points at an existing panel whose dry edge and RLST baseline
+    should be reused rather than refitted, so that extending the record forward
+    or backward in time leaves the already-reported summers untouched. Without
+    it, both are derived from ``years`` and every value moves when ``years``
+    does. See :func:`frozen_reference`.
+    """
     frames = [zonal_year(corridors_gpkg, interim, y, corridor_layer=corridor_layer)
               for y in years]
     rs = pd.concat(frames, ignore_index=True)
     logger.info("zonal target table: %d corridor-summer rows across %d summers",
                 len(rs), len(years))
-    rs = compute_tvwsi(rs)
+    edge, baseline = (None, None) if freeze_from is None else frozen_reference(freeze_from)
+    rs = compute_tvwsi(rs, edge=edge, baseline=baseline)
 
     climate_parquet = climate_parquet or (interim / "corridor_climate.parquet")
     climate = pd.read_parquet(climate_parquet)
@@ -290,6 +347,10 @@ def main() -> None:
     p.add_argument("--years", type=int, nargs="+", default=[2022, 2023, 2024, 2025])
     p.add_argument("--climate", type=Path, default=None)
     p.add_argument("--layer", default="corridors_analysis")
+    p.add_argument("--freeze-from", type=Path, default=None,
+                   help="reuse the dry edge and RLST baseline from this panel "
+                        "instead of refitting them, so extending --years leaves "
+                        "the summers already reported from it unchanged")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args()
 
@@ -297,8 +358,12 @@ def main() -> None:
         level=logging.INFO if args.verbose else logging.WARNING,
         format="%(levelname)s %(name)s: %(message)s",
     )
+    if args.freeze_from is not None and args.out == args.freeze_from:
+        p.error("--out would overwrite --freeze-from; write the extended panel "
+                "somewhere else so the reference survives")
     df = run(args.corridors, args.interim, args.out, years=tuple(args.years),
-             climate_parquet=args.climate, corridor_layer=args.layer)
+             climate_parquet=args.climate, corridor_layer=args.layer,
+             freeze_from=args.freeze_from)
 
     groups = predictor_columns(df)
     print("=" * 70)
