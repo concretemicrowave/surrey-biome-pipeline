@@ -68,3 +68,15 @@ docs/ml_pipeline_explorer.html
 # copy to drift out of sync with the version of record.
 # This repo is the code + data + deliverable companion the paper describes.
 docs/preprint/
+
+# Generated board + poster figure variants. All rebuild in seconds from tracked
+# source: `--mode poster`, scripts/plot_board_figures.py, docs/board/build.sh.
+# The paper-mode figures in docs/figures/ and docs/deliverable/ stay tracked —
+# the manuscript embeds them. The board's fonts are tracked deliberately: without
+# them the board renders in a substitute face and is not reproducible.
+docs/figures/board/
+docs/figures/poster/
+docs/deliverable/poster/
+docs/board/board.pdf
+docs/board/board_preview.png
+docs/board/board_detail_300dpi.png
