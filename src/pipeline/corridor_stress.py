@@ -1,9 +1,18 @@
 """Surrey GIN corridor water-stress map + ranking — the applied deliverable.
 
 Turns the Phase 3 result into the thing a city planner can act on: a ranked,
-mapped list of which of Surrey's 153 Green-Infrastructure corridors are most
+mapped list of which of Surrey's Green-Infrastructure corridors are most
 water-stressed, cross-referenced with their ecological value and development
 risk (the EMS prioritization lens).
+
+TWO UNITS, deliberately. The MapServer layer serves **153 polygons** carrying
+**144 GIN corridor ids** — seven corridors are digitised in several parts. The
+polygon is the *modelling* unit (its own pixels, its own coverage_frac, and what
+the cross-validation blocks on). The GIN corridor is the *reporting* unit: what
+Surrey manages and what Appendix J indexes. Reporting on polygons let GIN 14
+appear twice in one top-20, which is digitisation showing through, not a finding.
+Never label a corridor with ``objectid`` — that is an ArcGIS row number and it
+points a planner at the wrong place.
 
 Stress orientation (verified against the index construction in ``assemble.py``):
 ``dry_dist`` is signed POSITIVE on the wet side, so a *low* CDEI means a
@@ -15,12 +24,17 @@ be the denser-canopy ones nearest their moisture limit (see the honesty note in
 docs/PHASE3_FINDINGS.md).
 
 Outputs (to docs/deliverable/):
-  corridor_stress_ranking.csv   — all 153 corridors, full detail
+  corridor_stress_ranking.csv   — 144 GIN corridors, with Surrey's own
+                                  recommendation text (the reporting table)
+  polygon_stress_ranking.csv    — 153 polygons, full detail (the modelling table)
   fig1_stress_map.png           — choropleth of Surrey corridors by stress
   fig2_top_ranking.png          — the 20 most-stressed corridors, ranked
   fig3_dry_edge.png             — how CDEI is defined (NDVI–SWCI dry edge)
 
 CLI:  python -m src.pipeline.corridor_stress -v
+      python -m src.pipeline.corridor_stress --mode poster -v
+        -> the same three figures at print resolution in docs/deliverable/poster/,
+           for a science-fair board. Paper figures are never overwritten.
 """
 from __future__ import annotations
 
@@ -75,9 +89,18 @@ def build_table(features_path: Path, corridors_gpkg: Path) -> "pd.DataFrame":
 
     # EMS attributes + geometry.
     g = gpd.read_file(corridors_gpkg)
-    keep = ["objectid", "ecological_value", "corridor_type",
+    keep = ["objectid", "id", "ecological_value", "corridor_type",
             "risk_of_development", "target_width_m", "too_thin", "geometry"]
     g = g[[c for c in keep if c in g.columns]].to_crs("EPSG:26910")
+    # `objectid` is the ArcGIS row number; `id` is the City's GIN corridor id, and
+    # they are not the same. 153 polygons carry 144 GIN ids because seven corridors
+    # are digitised in parts. Everything this project reported before 2026-07-29
+    # was labelled with objectid, so "corridor 73" named a polygon, not the City's
+    # corridor 73. Both travel together from here on so the join stays auditable —
+    # scripts/parse_appendix_j.py verifies which column is which against the City's
+    # own published table.
+    if "id" in g.columns:
+        g["gin_id"] = pd.to_numeric(g["id"], errors="coerce").astype("Int64")
     g["area_ha"] = g.geometry.area / 1e4
     out = g.merge(agg, on="objectid")
 
@@ -91,6 +114,68 @@ def build_table(features_path: Path, corridors_gpkg: Path) -> "pd.DataFrame":
     return out.sort_values("stress_rank").reset_index(drop=True)
 
 
+APPENDIX_J = paths.INTERIM / "gin_appendix_j.csv"
+
+
+def gin_table(gdf, appendix_j: Path = APPENDIX_J) -> "pd.DataFrame":
+    """Collapse the polygon ranking to the unit the City actually manages.
+
+    Two units serve two purposes here, and conflating them is what produced the
+    original error.
+
+    The **polygon** is the modelling unit: it is a contiguous piece of habitat
+    with its own pixel geometry and its own ``coverage_frac``, which is what the
+    zonal statistics and the cross-validation are built on. That stays as it is.
+
+    The **GIN corridor** is the reporting unit: it is what Surrey manages, what
+    Appendix J indexes, and what a planner can act on. A polygon-level top-20 can
+    list one corridor twice — GIN 14 arrived as both rank 1 and rank 5 — which is
+    an artifact of digitisation, not a finding.
+
+    Stress is aggregated area-weighted, because a 13 ha part and a 0.8 ha part of
+    the same corridor should not count equally. The City's own written
+    recommendation is joined on, since that is the column that turns a ranking
+    into something a planner can do anything with.
+    """
+    agg = (gdf.assign(_w=gdf["area_ha"])
+              .groupby("gin_id")
+              .apply(lambda d: pd.Series({
+                  "tvwsi": (d["tvwsi"] * d["_w"]).sum() / d["_w"].sum(),
+                  "n_polygons": len(d),
+                  "area_ha": d["area_ha"].sum(),
+                  "years_in_driest_third": d["years_in_driest_third"].max(),
+                  "ecological_value": d["ecological_value"].iloc[0],
+                  "risk_of_development": d["risk_of_development"].iloc[0],
+                  "corridor_type": d["corridor_type"].iloc[0],
+                  "target_width_m": d["target_width_m"].iloc[0],
+                  "polygon_objectids": ";".join(str(int(o)) for o in sorted(d["objectid"])),
+              }), include_groups=False)
+              .reset_index())
+
+    agg["stress_pctile"] = (1 - agg["tvwsi"].rank(pct=True)) * 100
+    agg = agg.sort_values("tvwsi").reset_index(drop=True)
+    agg.insert(0, "stress_rank", np.arange(1, len(agg) + 1))
+
+    stressed = agg["stress_pctile"] >= 66.7
+    high_stakes = (agg["ecological_value"].eq("High")
+                   | agg["risk_of_development"].eq("High"))
+    agg["priority"] = np.where(stressed & high_stakes, "★ priority", "")
+
+    if appendix_j.exists():
+        j = pd.read_csv(appendix_j)[["gin_id", "recommendation"]]
+        agg = agg.merge(j, on="gin_id", how="left")
+        n = int(agg["recommendation"].notna().sum())
+        logger.info("joined Surrey's own recommendation text for %d/%d corridors",
+                    n, len(agg))
+    else:
+        logger.warning("%s missing — run scripts/parse_appendix_j.py for the "
+                       "City's recommendation text", appendix_j)
+
+    logger.info("GIN-level table: %d corridors from %d polygons; %d flagged priority",
+                len(agg), len(gdf), int((agg["priority"] != "").sum()))
+    return agg
+
+
 # --------------------------------------------------------------------------- #
 # Figures
 # --------------------------------------------------------------------------- #
@@ -99,7 +184,7 @@ def _style():
     plt.rcParams.update(viz.rcparams())
 
 
-def _warning_note(ax, y: float, *, fontsize: float = 8.5, ha: str = "center",
+def _warning_note(ax, y: float, *, fontsize: float | None = None, ha: str = "center",
                   x: float = 0.5) -> None:
     """The exploratory-ranking caveat, drawn as glyph + sentence.
 
@@ -108,7 +193,13 @@ def _warning_note(ax, y: float, *, fontsize: float = 8.5, ha: str = "center",
     sentence there reads as a legend entry. The warning glyph carries the
     status, which also means the caveat survives greyscale printing and
     colourblind readers in a way colour alone would not.
+
+    ``fontsize`` resolves at call time rather than in the signature, so that a
+    default argument cannot freeze the paper-mode size at import and silently
+    shrink the caveat on a poster.
     """
+    if fontsize is None:
+        fontsize = viz.pt(8.5)
     ax.text(x, y, f"\u26a0  {viz.EXPLORATORY_NOTE}", transform=ax.transAxes,
             ha=ha, va="top", fontsize=fontsize, color=viz.INK_2, zorder=9)
 
@@ -125,27 +216,36 @@ def fig_stress_map(gdf, out_path: Path, top_n: int = 8, *, standalone: bool = Tr
     import matplotlib.pyplot as plt
 
     _style()
-    fig, ax = plt.subplots(figsize=(9, 10))
+    fig, ax = plt.subplots(figsize=viz.figsize(9, 10))
     # Faint context: all corridors outlined.
-    gdf.plot(ax=ax, facecolor="none", edgecolor=viz.CONTEXT, linewidth=0.4)
+    gdf.plot(ax=ax, facecolor="none", edgecolor=viz.CONTEXT, linewidth=viz.pt(0.4))
     # Choropleth by stress percentile.
-    gdf.plot(ax=ax, column="stress_pctile", cmap=STRESS_CMAP, linewidth=0.3,
+    gdf.plot(ax=ax, column="stress_pctile", cmap=STRESS_CMAP, linewidth=viz.pt(0.3),
              edgecolor=viz.POLY_EDGE, legend=True,
              legend_kwds={"label": "Water-stress percentile  (100 = most stressed)",
                           "shrink": 0.5, "pad": 0.01})
-    # Mark + rank-label the most-stressed corridors.
+    # Mark + rank-label the most-stressed corridors. Marker area scales as the
+    # square of the linear text scale, so the ring keeps its weight next to the
+    # label it belongs to instead of shrinking away from it.
     top = gdf.nsmallest(top_n, "stress_rank")
     cent = top.geometry.representative_point()
-    ax.scatter(cent.x, cent.y, s=90, facecolor="none", edgecolor=viz.INK,
-               linewidth=1.6, zorder=5)
+    ax.scatter(cent.x, cent.y, s=90 * (viz.pt(1.0) ** 2), facecolor="none",
+               edgecolor=viz.INK, linewidth=viz.pt(1.6), zorder=5)
     for r, (x, y) in zip(top["stress_rank"], zip(cent.x, cent.y)):
-        ax.annotate(f"#{r}", (x, y), xytext=(6, 6), textcoords="offset points",
-                    fontsize=10, fontweight="bold", color=viz.INK, zorder=6)
+        ax.annotate(f"#{r}", (x, y), xytext=(viz.pt(6), viz.pt(6)),
+                    textcoords="offset points",
+                    fontsize=viz.pt(10), fontweight="bold", color=viz.INK, zorder=6)
     if standalone:
-        ax.set_title("Surrey corridors by canopy water-stress signal (CDEI)", pad=16)
-    ax.text(0.0, 1.005, f"153 Green-Infrastructure corridors · mean summer 2022–2025 · "
-            f"circled = {top_n} highest-signal", transform=ax.transAxes,
-            fontsize=9.5, color=viz.INK_2)
+        ax.set_title("Surrey corridors by canopy water-stress signal (CDEI)", pad=viz.pt(16))
+    # Counted from the data, not hardcoded. The map draws polygons, and there are
+    # more polygons than corridors, so it must say which it is showing.
+    n_poly = len(gdf)
+    n_gin = int(gdf["gin_id"].nunique()) if "gin_id" in gdf.columns else n_poly
+    unit = (f"{n_poly} corridor polygons ({n_gin} GIN corridors)"
+            if n_gin != n_poly else f"{n_poly} Green-Infrastructure corridors")
+    ax.text(0.0, viz.stack(1.005, anchor=1.0),
+            f"{unit} · mean summer 2022–2025 · circled = {top_n} highest-signal",
+            transform=ax.transAxes, fontsize=viz.pt(9.5), color=viz.INK_2)
     ax.set_aspect("equal")
     # Spatial reference. A published map without these is non-standard, and
     # set_axis_off() removes the coordinate ticks that would otherwise serve.
@@ -153,9 +253,10 @@ def fig_stress_map(gdf, out_path: Path, top_n: int = 8, *, standalone: bool = Tr
     viz.scale_bar(ax)
     viz.north_arrow(ax)
     ax.set_axis_off()
-    _warning_note(ax, -0.02)
-    ax.text(0.5, -0.05, "CDEI from Sentinel-2 + Landsat · EPSG:26910 (UTM 10N), grid north",
-            transform=ax.transAxes, ha="center", va="top", fontsize=8, color=viz.MUTED)
+    _warning_note(ax, viz.stack(-0.02, anchor=0.0))
+    ax.text(0.5, viz.stack(-0.05, anchor=0.0), "CDEI from Sentinel-2 + Landsat · EPSG:26910 (UTM 10N), grid north",
+            transform=ax.transAxes, ha="center", va="top", fontsize=viz.pt(8),
+            color=viz.MUTED)
     fig.tight_layout()
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
@@ -170,23 +271,26 @@ def fig_top_ranking(gdf, out_path: Path, top_n: int = 20, *, standalone: bool = 
     top = gdf.nsmallest(top_n, "stress_rank").iloc[::-1]
     norm = colors.Normalize(0, 100)
     bar_c = plt.get_cmap(STRESS_CMAP)(norm(top["stress_pctile"]))
-    labels = [f"#{r}  corridor {int(o)}" for r, o in zip(top["stress_rank"], top["objectid"])]
+    # Labelled by GIN id — the number Surrey uses. objectid is an ArcGIS row
+    # number and naming a corridor by it points a planner at the wrong place.
+    idcol = "gin_id" if "gin_id" in top.columns else "objectid"
+    labels = [f"#{r}  corridor {int(o)}" for r, o in zip(top["stress_rank"], top[idcol])]
 
-    fig, ax = plt.subplots(figsize=(9.5, 8))
+    fig, ax = plt.subplots(figsize=viz.figsize(9.5, 8))
     ax.barh(labels, top["stress_pctile"], color=bar_c, edgecolor="white", height=0.72)
     for y, (p, ev, pr) in enumerate(zip(top["stress_pctile"],
                                         top["ecological_value"], top["priority"])):
         tag = f"{ev or '—'} value{'   ' + pr if pr else ''}"
-        ax.text(min(p + 1.2, 99), y, tag, va="center", fontsize=8.5,
+        ax.text(min(p + 1.2, 99), y, tag, va="center", fontsize=viz.pt(8.5),
                 color=viz.INK if pr else viz.INK_2,
                 fontweight="bold" if pr else "normal")
     ax.set_xlim(0, 108)
     ax.set_xlabel("Canopy water-stress signal percentile  (100 = highest signal)")
     if standalone:
-        ax.set_title(f"Surrey's {top_n} highest canopy-stress-signal corridors", pad=30)
-    ax.text(0.0, 1.028, "★ = also high ecological value or development risk (candidate priority)",
-            transform=ax.transAxes, fontsize=9.5, color=viz.INK_2)
-    _warning_note(ax, 1.016, ha="left", x=0.0)
+        ax.set_title(f"Surrey's {top_n} highest canopy-stress-signal corridors", pad=viz.pt(30))
+    ax.text(0.0, viz.stack(1.028, anchor=1.0), "★ = also high ecological value or development risk (candidate priority)",
+            transform=ax.transAxes, fontsize=viz.pt(9.5), color=viz.INK_2)
+    _warning_note(ax, viz.stack(1.016, anchor=1.0), ha="left", x=0.0)
     ax.tick_params(axis="y", length=0)
     ax.margins(y=0.01)
     fig.tight_layout()
@@ -208,21 +312,21 @@ def fig_dry_edge(features_path: Path, out_path: Path, *, standalone: bool = True
                                      tvwsi=("tvwsi", "mean")).reset_index()
     stress = (1 - cm_["tvwsi"].rank(pct=True)) * 100
 
-    fig, ax = plt.subplots(figsize=(8.5, 6.2))
+    fig, ax = plt.subplots(figsize=viz.figsize(8.5, 6.2))
     sc = ax.scatter(cm_["ndvi"], cm_["swci"], c=stress, cmap=STRESS_CMAP,
-                    s=42, edgecolor=viz.POLY_EDGE, linewidth=0.4,
-                    norm=colors.Normalize(0, 100))
+                    s=42 * (viz.pt(1.0) ** 2), edgecolor=viz.POLY_EDGE,
+                    linewidth=viz.pt(0.4), norm=colors.Normalize(0, 100))
     if a is not None:
         xs = np.linspace(cm_["ndvi"].min(), cm_["ndvi"].max(), 50)
-        ax.plot(xs, a + b * xs, "--", color=viz.INK, lw=2,
+        ax.plot(xs, a + b * xs, "--", color=viz.INK, lw=viz.pt(2),
                 label=f"dry edge  (SWCI = {a:.2f} + {b:.2f}·NDVI)")
-        ax.legend(loc="upper left", fontsize=9)
+        ax.legend(loc="upper left", fontsize=viz.pt(9))
     ax.set(xlabel="NDVI (greenness)", ylabel="SWCI (canopy water content)")
     if standalone:
-        ax.set_title("How corridor water stress is measured", pad=26)
-    ax.text(0.0, 1.008, "Each dot = one corridor. Distance ABOVE the dry edge = water margin; "
+        ax.set_title("How corridor water stress is measured", pad=viz.pt(26))
+    ax.text(0.0, viz.stack(1.008, anchor=1.0), "Each dot = one corridor. Distance ABOVE the dry edge = water margin; "
             "corridors near the line are stressed.", transform=ax.transAxes,
-            fontsize=9, color=viz.INK_2)
+            fontsize=viz.pt(9), color=viz.INK_2)
     cb = fig.colorbar(sc, ax=ax, shrink=0.8)
     cb.set_label("stress percentile")
     fig.tight_layout()
@@ -233,29 +337,48 @@ def fig_dry_edge(features_path: Path, out_path: Path, *, standalone: bool = True
 
 def run(features_path: Path = paths.FEATURES, corridors_gpkg: Path = CORRIDORS,
         out_dir: Path = OUT_DIR, *,
-        manuscript_dir: Path | None = None) -> "pd.DataFrame":
+        manuscript_dir: Path | None = None,
+        mode: str = "paper") -> "pd.DataFrame":
     """Build the ranking table and its figures.
 
     ``manuscript_dir``, if given, additionally writes untitled copies of the two
     figures the paper uses. The manuscript lives outside this repository, so the
     path is passed in rather than hardcoded, and nothing is written there by
     default.
+
+    ``mode="poster"`` re-renders the same figures for large-format print (see
+    ``viz`` for what that changes). It never writes to ``manuscript_dir``: the
+    preprint takes paper-mode figures and nothing else.
     """
+    viz.set_mode(mode)
     out_dir.mkdir(parents=True, exist_ok=True)
     gdf = build_table(features_path, corridors_gpkg)
 
-    cols = ["stress_rank", "objectid", "stress_pctile", "tvwsi",
+    cols = ["stress_rank", "gin_id", "objectid", "stress_pctile", "tvwsi",
             "years_in_driest_third", "ecological_value", "risk_of_development",
             "corridor_type", "area_ha", "target_width_m", "lst", "ndvi", "priority"]
     tidy = gdf[[c for c in cols if c in gdf.columns]].copy()
-    tidy.to_csv(out_dir / "corridor_stress_ranking.csv", index=False)
-    logger.info("wrote %s", out_dir / "corridor_stress_ranking.csv")
+    tidy.to_csv(out_dir / "polygon_stress_ranking.csv", index=False)
+    logger.info("wrote %s (modelling unit: %d polygons)",
+                out_dir / "polygon_stress_ranking.csv", len(tidy))
+
+    # The reporting table: one row per GIN corridor, with Surrey's own recommendation.
+    if "gin_id" in gdf.columns:
+        gin = gin_table(gdf)
+        gin.to_csv(out_dir / "corridor_stress_ranking.csv", index=False)
+        logger.info("wrote %s (reporting unit: %d GIN corridors)",
+                    out_dir / "corridor_stress_ranking.csv", len(gin))
+    else:
+        tidy.to_csv(out_dir / "corridor_stress_ranking.csv", index=False)
 
     fig_stress_map(gdf, out_dir / "fig1_stress_map.png")
     fig_top_ranking(gdf, out_dir / "fig2_top_ranking.png")
     fig_dry_edge(features_path, out_dir / "fig3_dry_edge.png")
 
     if manuscript_dir is not None:
+        if mode != "paper":
+            raise ValueError("manuscript figures are paper-mode only; "
+                             f"refusing to write {mode!r} figures to {manuscript_dir}")
         manuscript_dir.mkdir(parents=True, exist_ok=True)
         fig_stress_map(gdf, manuscript_dir / "fig2-stress-map.png", standalone=False)
         fig_dry_edge(features_path, manuscript_dir / "fig3-dry-edge.png", standalone=False)
@@ -270,12 +393,18 @@ def main() -> None:
     p.add_argument("--manuscript-figures", type=Path, default=None,
                    help="also write untitled copies here, for the preprint "
                         "(the caption carries the title there)")
+    p.add_argument("--mode", choices=viz.MODES, default="paper",
+                   help="'poster' re-renders at print resolution with larger "
+                        "type, for a science-fair board; default 'paper'")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING,
                         format="%(levelname)s %(name)s: %(message)s")
-    gdf = run(args.features, args.corridors, args.out_dir,
-              manuscript_dir=args.manuscript_figures)
+    out_dir = args.out_dir
+    if args.mode != "paper" and out_dir == OUT_DIR:
+        out_dir = OUT_DIR / args.mode       # never overwrite the paper figures
+    gdf = run(args.features, args.corridors, out_dir,
+              manuscript_dir=args.manuscript_figures, mode=args.mode)
 
     print("=" * 70)
     print("Surrey GIN corridor water-stress ranking — most-stressed first")
@@ -290,7 +419,7 @@ def main() -> None:
               f"{r.years_in_driest_third}/4 summers driest-third{star}")
     n_pri = int((gdf["priority"] != "").sum())
     print(f"\n  {n_pri} corridors flagged PRIORITY (most-stressed third + high value/risk)")
-    print(f"  figures + full ranking -> {OUT_DIR}")
+    print(f"  figures + full ranking -> {out_dir}  (mode: {args.mode})")
 
 
 if __name__ == "__main__":
