@@ -1,6 +1,6 @@
 # Surrey GIN Corridor Water-Stress — Applied Deliverable
 
-A satellite-based tool for tracking water stress in the City of Surrey's 153
+A satellite-based tool for tracking water stress in the City of Surrey's 144
 Green-Infrastructure Network (GIN) corridors — **and an honest account of what it
 can and cannot yet claim**, after independent multi-sensor validation.
 
@@ -21,8 +21,8 @@ it against independent measurements. The two axes came out very differently:
   drought-monitoring tool should do. But be precise about how strong that evidence
   is. The headline figures (vs CMD ρ = −0.68, vs precipitation ρ = +0.72) are
   correlations over **four points** — the four summer means — and a correlation on
-  n = 4 establishes a *sign*, not a magnitude. Computed within corridors instead
-  (each corridor's own mean removed first, n = 612 corridor-summers), the same
+  n = 4 establishes a *sign*, not a magnitude. Computed within polygons instead
+  (each polygon's own mean removed first, n = 612 polygon-summers), the same
   relationships hold in the same directions but are weaker: ρ = −0.31 and ρ = +0.32.
   So: the index responds to drought the way it should, and four summers is too short
   to call that a validation. More summers (Sentinel-2 reaches back to ~2017) would
@@ -58,26 +58,34 @@ across flat Surrey.
 | `fig1_stress_map.png` | Surrey corridors mapped by the CDEI stress *signal* (dark = higher) |
 | `fig2_top_ranking.png` | the 20 highest-signal corridors, ranked, with priority flags |
 | `fig3_dry_edge.png` | how the index is defined — distance from the NDVI–SWCI dry edge |
-| `corridor_stress_ranking.csv` | all 153 corridors, full detail |
+| `corridor_stress_ranking.csv` | all **144 GIN corridors** — the reporting unit, with the City's own recommendation text |
+| `polygon_stress_ranking.csv` | all **153 corridor polygons** — the modelling unit, full detail |
+
+**Two units, deliberately.** The City's MapServer layer serves 153 polygons
+carrying 144 GIN corridor ids, because seven corridors are digitised in several
+pieces. The polygon is what the satellite statistics and cross-validation are
+computed on; the GIN corridor is what the City manages, and corridor values are
+area-weighted means of their polygons. Corridor ids below are the City's GIN ids,
+**not** ArcGIS row numbers — the two run 1–144 and 1–153 and do not correspond.
 
 ## Top 10 highest canopy-stress-signal corridors (mean summer CDEI, 2022–2025)
 *Exploratory ranking — see the validation note above.*
 
-| Rank | Corridor | Stress %ile | Ecological value | Dev. risk | Summers in driest third | Area (ha) |
-|---|---|---|---|---|---|---|
-| 1 | 73 | 99 | Low | Low | 4/4 | 0.8 |
-| 2 | 132 | 99 | Moderate | Moderate | 4/4 | 10.5 |
-| 3 | 81 | 98 | Moderate | Moderate | 4/4 | 2.9 |
-| 4 | 36 | 97 | Moderate | Low | 4/4 | 4.6 |
-| 5 | 71 | 97 | Low | Low | 4/4 | 0.8 |
-| 6 | 28 | 96 | Low | Moderate | 4/4 | 13.8 |
-| 7 | 78 | 95 | Moderate | Low | 4/4 | 0.8 |
-| 8 ★ | 1 | 95 | High | Moderate | 4/4 | 4.6 |
-| 9 | 15 | 94 | Moderate | Moderate | 4/4 | 4.1 |
-| 10 ★ | 121 | 93 | High | Moderate | 4/4 | 7.7 |
+| Rank | GIN corridor | Polygons | Stress %ile | Ecological value | Dev. risk | Summers in driest third | Area (ha) |
+|---|---|---|---|---|---|---|---|
+| 1 | 106 | 1 | 99 | Moderate | Moderate | 4/4 | 10.5 |
+| 2 | 14 | 2 | 99 | Low | Low | 4/4 | 1.6 |
+| 3 | 2 | 1 | 98 | Moderate | Moderate | 4/4 | 2.9 |
+| 4 | 64 | 1 | 97 | Moderate | Low | 4/4 | 4.6 |
+| 5 | 89 | 1 | 97 | Low | Moderate | 4/4 | 13.8 |
+| 6 | 6 | 1 | 96 | Moderate | Low | 4/4 | 0.8 |
+| 7 ★ | 36 | 1 | 95 | High | Moderate | 4/4 | 4.6 |
+| 8 | 111 | 1 | 94 | Moderate | Moderate | 4/4 | 4.1 |
+| 9 ★ | 52 | 1 | 94 | High | Moderate | 4/4 | 7.7 |
+| 10 | 63 | 1 | 93 | Low | Moderate | 4/4 | 5.5 |
 
 ★ = would be a restoration **priority** (highest-signal third *and* high ecological
-value or development risk) — **if** the spatial ranking validates. 15 of 153 corridors
+value or development risk) — **if** the spatial ranking validates. 14 of 144 corridors
 carry this flag; treat as candidates to investigate, not a confirmed list.
 
 ## How to read the index
@@ -98,7 +106,7 @@ canopy."
 - 4 summers is a short record, not a climate trend — and too short to support a
   temporal *validation* claim (see the direction-check note above). Every correlation
   reported here carries its n: n = 4 for the across-summer figures, n = 612 for the
-  within-corridor ones.
+  within-polygon ones.
 
 ## What is solid, and where to take it next
 - **Solid:** CDEI as a *temporal* drought monitor for Surrey's corridors — it moves

@@ -8,8 +8,12 @@ SWCI means wet, so the dry edge is the LOWER envelope and slopes up. Drawing a
 purpose-built version avoids having to mentally flip a borrowed diagram every
 time.
 
-Everything plotted is measured, not illustrative: 612 real corridor-summers and
+Everything plotted is measured, not illustrative: 612 real polygon-summers and
 the dry edge actually fitted by ``assemble.dry_edge``.
+
+The row unit is the corridor POLYGON, not the City's GIN corridor: 153 polygons
+carry 144 GIN ids because seven corridors are digitised in several pieces. The
+subtitle counts both from the panel rather than hardcoding either.
 
     .venv/bin/python scripts/plot_cdei_feature_space.py
 """
@@ -77,6 +81,10 @@ def main(out: Path = OUT, *, standalone: bool = True, mode: str = "paper") -> No
     df = pd.read_parquet(paths.FEATURES)
     a = float(df["dry_edge_a"].iloc[0])
     b = float(df["dry_edge_b"].iloc[0])
+    # Both units, counted rather than asserted. `objectid` is the polygon (the row
+    # unit here); `id` is the City's GIN corridor id, and there are fewer of those.
+    n_poly = int(df["objectid"].nunique())
+    n_gin = int(df["id"].nunique()) if "id" in df.columns else n_poly
 
     fig = plt.figure(figsize=(11.5, 10.4), facecolor=SURFACE, dpi=200)
     gs = GridSpec(2, 4, figure=fig, height_ratios=[2.5, 1.0],
@@ -179,17 +187,20 @@ def main(out: Path = OUT, *, standalone: bool = True, mode: str = "paper") -> No
     # The explanatory line stays in both: it explains the construction rather
     # than restating the caption, and the figure is unreadable without it.
     fig.text(0.075, y_sub,
-             "Every corridor-summer placed by greenness against canopy water. Distance from the fitted dry edge is how far it sits\n"
+             "Every polygon-summer placed by greenness against canopy water. Distance from the fitted dry edge is how far it sits\n"
              "from being as dry as its greenness allows — that distance, divided by relative warmth, is CDEI.",
              color=INK_2, fontsize=11, ha="left", va="top", linespacing=1.6)
     fig.text(0.075, y_meta,
-             f"{len(df)} corridor-summers  ·  153 Surrey GIN corridors × {len(years)} summers  ·  "
+             # Deliberately no GIN count here: spelling out both units pushes this
+             # line past the axes and bbox_inches="tight" then widens the whole
+             # figure. The LaTeX caption carries the 144 instead.
+             f"{len(df)} polygon-summers  ·  {n_poly} Surrey corridor polygons × {len(years)} summers  ·  "
              "dry edge fitted by assemble.dry_edge (12 NDVI bins, 5th percentile)  ·  "
-             "corridors cluster in the closed-canopy end, where the wet-to-dry range is narrowest",
+             "polygons cluster in the closed-canopy end, where the wet-to-dry range is narrowest",
              color=MUTED, fontsize=9.5, ha="left", va="top")
     fig.text(0.075, max(tops) + 0.052,
-             "The same corridors, summer by summer — the whole cloud shifts together as the climate does, "
-             "while the spread between corridors stays put.",
+             "The same polygons, summer by summer — the whole cloud shifts together as the climate does, "
+             "while the spread between polygons stays put.",
              color=INK_2, fontsize=10.5, ha="left", va="bottom")
 
     out.parent.mkdir(parents=True, exist_ok=True)

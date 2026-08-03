@@ -264,11 +264,24 @@ def fig_stress_map(gdf, out_path: Path, top_n: int = 8, *, standalone: bool = Tr
 
 
 def fig_top_ranking(gdf, out_path: Path, top_n: int = 20, *, standalone: bool = True):
+    """A ranked bar chart of the most-stressed units.
+
+    Pass the GIN table, not the polygon table. A polygon-level top-20 labelled by
+    GIN id lists GIN 14 twice — at ranks 1 and 5, with two different stress values
+    — because that corridor is digitised in two pieces. Ranking a corridor twice
+    is an artifact of digitisation and reads as a mistake to anyone who knows the
+    network.
+    """
     import matplotlib.pyplot as plt
     from matplotlib import colors
 
     _style()
     top = gdf.nsmallest(top_n, "stress_rank").iloc[::-1]
+    if "gin_id" in top.columns:
+        dupes = top["gin_id"].duplicated().sum()
+        if dupes:
+            logger.warning("top-%d contains %d repeated GIN id(s) — this looks like "
+                           "the polygon table; pass gin_table(gdf) instead", top_n, dupes)
     norm = colors.Normalize(0, 100)
     bar_c = plt.get_cmap(STRESS_CMAP)(norm(top["stress_pctile"]))
     # Labelled by GIN id — the number Surrey uses. objectid is an ArcGIS row
@@ -310,6 +323,9 @@ def fig_dry_edge(features_path: Path, out_path: Path, *, standalone: bool = True
     b = df["dry_edge_b"].iloc[0] if "dry_edge_b" in df else None
     cm_ = df.groupby("objectid").agg(ndvi=("ndvi_mean", "mean"), swci=("swci_mean", "mean"),
                                      tvwsi=("tvwsi", "mean")).reset_index()
+    # One dot per polygon, which is not one dot per GIN corridor — see gin_table.
+    # Counted from the panel so the subtitle cannot drift from what is plotted.
+    n_gin = int(df["id"].nunique()) if "id" in df.columns else len(cm_)
     stress = (1 - cm_["tvwsi"].rank(pct=True)) * 100
 
     fig, ax = plt.subplots(figsize=viz.figsize(8.5, 6.2))
@@ -324,8 +340,10 @@ def fig_dry_edge(features_path: Path, out_path: Path, *, standalone: bool = True
     ax.set(xlabel="NDVI (greenness)", ylabel="SWCI (canopy water content)")
     if standalone:
         ax.set_title("How corridor water stress is measured", pad=viz.pt(26))
-    ax.text(0.0, viz.stack(1.008, anchor=1.0), "Each dot = one corridor. Distance ABOVE the dry edge = water margin; "
-            "corridors near the line are stressed.", transform=ax.transAxes,
+    unit = (f"one of {len(cm_)} corridor polygons ({n_gin} GIN corridors)"
+            if n_gin != len(cm_) else f"one of {len(cm_)} corridors")
+    ax.text(0.0, viz.stack(1.008, anchor=1.0), f"Each dot = {unit}. Distance ABOVE the dry edge = water margin; "
+            "polygons near the line are stressed.", transform=ax.transAxes,
             fontsize=viz.pt(9), color=viz.INK_2)
     cb = fig.colorbar(sc, ax=ax, shrink=0.8)
     cb.set_label("stress percentile")
@@ -369,10 +387,13 @@ def run(features_path: Path = paths.FEATURES, corridors_gpkg: Path = CORRIDORS,
         logger.info("wrote %s (reporting unit: %d GIN corridors)",
                     out_dir / "corridor_stress_ranking.csv", len(gin))
     else:
+        gin = tidy
         tidy.to_csv(out_dir / "corridor_stress_ranking.csv", index=False)
 
+    # The map draws polygons because polygons are what has geometry; the ranked bar
+    # chart names corridors, so it takes the corridor table or it repeats one.
     fig_stress_map(gdf, out_dir / "fig1_stress_map.png")
-    fig_top_ranking(gdf, out_dir / "fig2_top_ranking.png")
+    fig_top_ranking(gin, out_dir / "fig2_top_ranking.png")
     fig_dry_edge(features_path, out_dir / "fig3_dry_edge.png")
 
     if manuscript_dir is not None:
@@ -406,19 +427,29 @@ def main() -> None:
     gdf = run(args.features, args.corridors, out_dir,
               manuscript_dir=args.manuscript_figures, mode=args.mode)
 
+    # Report the GIN corridor, not the polygon. The header says "corridor", so
+    # printing objectid here is what produced the original mislabelling: a
+    # polygon-level top-15 lists GIN 14 twice and names every row by an ArcGIS
+    # row number. Fall back to polygons only if the GIN key is unavailable.
+    report = gin_table(gdf) if "gin_id" in gdf.columns else gdf
+    by_gin = "gin_id" in gdf.columns
     print("=" * 70)
-    print("Surrey GIN corridor water-stress ranking — most-stressed first")
+    print("Surrey GIN corridor water-stress ranking — most-stressed first"
+          if by_gin else "Surrey corridor POLYGON ranking (no GIN key) — most-stressed first")
     print("=" * 70)
-    show = gdf.head(15)
-    for _, r in show.iterrows():
+    for _, r in report.head(15).iterrows():
         star = " " + r["priority"] if r["priority"] else ""
-        print(f"  #{int(r.stress_rank):>3}  corridor {int(r.objectid):>4}  "
+        label = (f"GIN {int(r.gin_id):>4}" if by_gin else f"polygon {int(r.objectid):>4}")
+        pieces = (f" ({int(r.n_polygons)} polygons)"
+                  if by_gin and int(r.n_polygons) > 1 else "")
+        print(f"  #{int(r.stress_rank):>3}  {label}  "
               f"stress {r.stress_pctile:5.1f}pct  "
               f"{str(r.ecological_value or '—'):<8} value  "
               f"{str(r.risk_of_development or '—'):<8} dev-risk  "
-              f"{r.years_in_driest_third}/4 summers driest-third{star}")
-    n_pri = int((gdf["priority"] != "").sum())
-    print(f"\n  {n_pri} corridors flagged PRIORITY (most-stressed third + high value/risk)")
+              f"{r.years_in_driest_third}/4 summers driest-third{star}{pieces}")
+    n_pri = int((report["priority"] != "").sum())
+    unit = "corridors" if by_gin else "polygons"
+    print(f"\n  {n_pri} {unit} flagged PRIORITY (most-stressed third + high value/risk)")
     print(f"  figures + full ranking -> {out_dir}  (mode: {args.mode})")
 
 
