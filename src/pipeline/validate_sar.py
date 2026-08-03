@@ -101,6 +101,9 @@ def run(years=(2022, 2023, 2024, 2025), ranking_csv: Path = RANKING,
         ["objectid", "geometry"]].to_crs(ANALYSIS_CRS)
     results = [validate_year(y, ranking, corridors) for y in years]
     df = pd.DataFrame([r for r, _ in results])
+    # Rounded to the precision the summary is quoted at, so a re-run produces the
+    # same file rather than a diff of trailing float digits.
+    df = df.round({c: 3 for c in df.columns if c.endswith(("_stress", "_ndvi"))})
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_csv, index=False)
     logger.info("wrote %s", out_csv)
