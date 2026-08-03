@@ -56,15 +56,30 @@ it against independent measurements. The two axes came out very differently:
 
   The vegetation-condition radar indices (RVI, cross-ratio) are **flat-null** every
   year (ρ ≈ 0). The only radar signal that correlates with the ranking (VH/VV
-  backscatter) tracks **canopy density** (VH vs NDVI ρ ≈ +0.55), not water. So the
-  between-corridor ranking is **confounded with how dense the vegetation is** — the
-  "most-stressed" corridors are largely the densest-canopy ones. This is a stable,
-  reproducible property, not a one-year artifact.
+  backscatter) tracks **canopy density** (VH vs NDVI ρ ≈ +0.55), not water. So CDEI
+  is **entangled with how dense the vegetation is** — stably, in all four summers
+  (VH vs CDEI ρ = −0.356 to −0.373), not as a one-year artifact.
 
-**Bottom line:** both checks failed, for different reasons. The
-**drought-over-time claim is withdrawn** — the index produced it. The
-corridor-vs-corridor **ranking is exploratory**, not a statement of which corridors
-are physically driest, because it is confounded with canopy density.
+  **But density is not what orders the corridors.** I tested that directly rather
+  than assuming it either way. Ranking corridors on CDEI *residualised against VH
+  backscatter* — that is, on how dry each corridor is **for its own canopy
+  density** — reproduces the published order at **Spearman ρ = +0.924** over the
+  131 corridors with usable radar. The control removes only 9.4% of CDEI's
+  variance. Seven of the published top-10 stay in the top-10, and the three that
+  move land at 11, 12 and 13.
+
+  So the earlier reading of this file — that the most-stressed corridors are
+  largely just the densest ones — was **too pessimistic, and is withdrawn**. The
+  confound is real and measured; it is not what produces the ranking. Radar is a
+  partial control (VH tracks density at ρ ≈ 0.55, so it sees roughly half of what
+  is there), and this is not a substitute for ground truth. Second ranking shipped
+  as `corridor_stress_ranking_canopy_controlled.csv`.
+
+**Bottom line:** the **drought-over-time claim is withdrawn** — the index produced
+it. The corridor-vs-corridor **ranking is still exploratory**, because nothing here
+has been checked against a ground measurement. But it is in better shape than this
+file previously said: the canopy-density objection was tested with an independent
+sensor and the ordering survives it at ρ = +0.924.
 
 What the tool does deliver is **coverage**: a stress ranking over all 144
 corridors, including ones only 10 m wide, from free public imagery, recomputed
@@ -84,6 +99,8 @@ across flat Surrey.
 | `fig3_dry_edge.png` | how the index is defined — distance from the NDVI–SWCI dry edge |
 | `corridor_stress_ranking.csv` | all **144 GIN corridors** — the reporting unit, with the City's own recommendation text |
 | `polygon_stress_ranking.csv` | all **153 corridor polygons** — the modelling unit, full detail |
+| `corridor_stress_ranking_canopy_controlled.csv` | the **131 corridors with radar cover**, ranked on CDEI residualised against VH backscatter — "dry for its own canopy density". Corroborates the file above (ρ = +0.924); not a replacement |
+| `sar_validation_summary.csv` | the Sentinel-1 check, per summer |
 
 **Two units, deliberately.** The City's MapServer layer serves 153 polygons
 carrying 144 GIN corridor ids, because seven corridors are digitised in several
@@ -109,20 +126,27 @@ area-weighted means of their polygons. Corridor ids below are the City's GIN ids
 | 10 | 63 | 1 | 93 | Low | Moderate | 4/4 | 5.5 |
 
 ★ = would be a restoration **priority** (highest-signal third *and* high ecological
-value or development risk) — **if** the spatial ranking validates. 14 of 144 corridors
-carry this flag; treat as candidates to investigate, not a confirmed list.
+value or development risk) — **if** the spatial ranking validates against a ground
+measurement, which it has not. 14 of 144 corridors carry this flag; treat as
+candidates to investigate, not a confirmed list. GIN 36 sits at rank 7 here and
+rank 9 in the canopy-controlled file — note those are ranks out of 144 and 131
+respectively, so they are close but not the same base.
 
 ## How to read the index
 Stress signal = proximity to the vegetation **dry edge** (low CDEI): a corridor
-near the dry edge has little canopy-water margin for its greenness. The honest
-caveat from validation is that, over flat Surrey, this signal is entangled with
-**canopy density** — so a high signal may mean "dense canopy" as much as "thirsty
-canopy."
+near the dry edge has little canopy-water margin for its greenness. The signal is
+entangled with **canopy density** (VH vs CDEI ρ ≈ −0.36), so an individual high
+value may mean "dense canopy" as much as "thirsty canopy." The *ranking* is
+another matter — controlling for density barely changes it (ρ = +0.924), so the
+order is not a density artifact even though the value is partly a density signal.
 
 ## Honest limits
-- **The between-corridor ranking is not independently validated** and is confounded
-  with canopy density (shown by independent Sentinel-1 radar). This is the headline
-  limitation.
+- **The between-corridor ranking is not independently validated.** Sentinel-1 radar
+  does not corroborate it as *water* stress — the vegetation-condition indices are
+  flat-null. This is the headline limitation, and it is a gap in confirmation, not
+  a demonstrated error. The narrower charge that the ranking is a canopy-density
+  list in disguise was tested and does not hold (ρ = +0.924 after controlling for
+  backscatter).
 - CDEI is a **relative feature-space index**, not a soil-moisture measurement; it is
   not validated against field/ground observations.
 - Between-corridor differences over flat Surrey are genuinely subtle — the same
@@ -148,10 +172,15 @@ canopy."
 - **Withdrawn — CDEI as a temporal drought monitor.** I listed this here as the
   solid axis. The nine-summer extension refuted it, and the cause is understood;
   see the TIME note above.
-- **Next.** De-confound the ranking from canopy density — that is the headline
-  limitation. Validate CDEI against any ground observation; no in-situ soil
-  moisture exists for these corridors, which is why neither check could be tested
-  against truth. If a temporal monitor is still wanted after that, build it on an
+- **Solid — the ranking is not a canopy artifact.** Controlling for density with an
+  independent sensor leaves the order intact (ρ = +0.924). This was the sharpest
+  objection to the deliverable and it does not hold.
+- **Next.** Validate CDEI against a ground observation — that is now the whole of
+  the headline limitation. No in-situ soil moisture exists for these corridors,
+  which is why neither check could be tested against truth; one season of soil
+  probes in a dozen corridors would settle it. A stronger structure control than
+  VH backscatter (LiDAR canopy height, if the City holds it) would tighten the
+  de-confounding further. If a temporal monitor is still wanted, build it on an
   index calibrated for time rather than retrofitting this one.
 
 Regenerate: `python -m src.pipeline.corridor_stress -v`

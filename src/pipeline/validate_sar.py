@@ -34,8 +34,16 @@ BBOX_4326 = [-122.95, 49.00, -122.70, 49.22]      # Surrey
 ANALYSIS_CRS = "EPSG:26910"
 RES_M = 30
 PC_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
-RANKING = paths.DOCS / "deliverable" / "corridor_stress_ranking.csv"
+# The POLYGON table, not the corridor one. Polygons are the modelling unit and
+# carry `objectid` and `ndvi`, which this module merges and filters on; the
+# corridor table has carried neither since the GIN unit pass (2026-07-29), so
+# pointing here at corridor_stress_ranking.csv raises KeyError on the merge.
+# The published summary was computed per polygon, which is what this reproduces.
+RANKING = paths.DOCS / "deliverable" / "polygon_stress_ranking.csv"
 OUT_CSV = paths.DOCS / "deliverable" / "sar_validation_summary.csv"
+# Per-polygon backscatter, kept so the radar can be used as an independent
+# canopy-structure control rather than only as a yes/no validation check.
+PER_UNIT_CSV = paths.PROCESSED / "sar_per_polygon.csv"
 
 
 def s1_summer_composite(year: int):
@@ -61,7 +69,8 @@ def s1_summer_composite(year: int):
     return out.rio.write_crs(ANALYSIS_CRS), len(items)
 
 
-def validate_year(year: int, ranking: pd.DataFrame, corridors) -> dict:
+def validate_year(year: int, ranking: pd.DataFrame, corridors) -> tuple[dict, pd.DataFrame]:
+    """Summary row for `year`, plus the per-polygon backscatter behind it."""
     from exactextract import exact_extract
     from scipy.stats import spearmanr
 
@@ -77,20 +86,29 @@ def validate_year(year: int, ranking: pd.DataFrame, corridors) -> dict:
            "vh_vs_ndvi": spearmanr(m["ndvi"], m["vh"])[0]}
     logger.info("%d: %d scenes | RVI-stress %+.3f | VH-stress %+.3f | VH-NDVI %+.3f",
                 year, n, row["rvi_vs_stress"], row["vh_vs_stress"], row["vh_vs_ndvi"])
-    return row
+    per = m[["objectid", "gin_id", "vv", "vh", "rvi", "cr", "ndvi", "tvwsi",
+             "stress_pctile"]].copy()
+    per.insert(0, "year", year)
+    return row, per
 
 
 def run(years=(2022, 2023, 2024, 2025), ranking_csv: Path = RANKING,
-        out_csv: Path = OUT_CSV) -> pd.DataFrame:
+        out_csv: Path = OUT_CSV, per_unit_csv: Path = PER_UNIT_CSV) -> pd.DataFrame:
     import geopandas as gpd
 
     ranking = pd.read_csv(ranking_csv)
     corridors = gpd.read_file(paths.INTERIM / "corridors_analysis.gpkg")[
         ["objectid", "geometry"]].to_crs(ANALYSIS_CRS)
-    df = pd.DataFrame([validate_year(y, ranking, corridors) for y in years])
+    results = [validate_year(y, ranking, corridors) for y in years]
+    df = pd.DataFrame([r for r, _ in results])
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_csv, index=False)
     logger.info("wrote %s", out_csv)
+
+    per = pd.concat([p for _, p in results], ignore_index=True)
+    per_unit_csv.parent.mkdir(parents=True, exist_ok=True)
+    per.to_csv(per_unit_csv, index=False)
+    logger.info("wrote %s (%d polygon-summers)", per_unit_csv, len(per))
     return df
 
 
