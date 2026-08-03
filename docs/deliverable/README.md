@@ -17,32 +17,32 @@ Sentinel-2 + Landsat).
 I did not stop at building the index — I tested whether it is *true* by comparing
 it against independent measurements. The two axes came out very differently:
 
-- **Over TIME — tested against a longer record, and it FAILED. ✗** This was
-  previously reported here as the tool's strongest axis. It is now withdrawn.
+- **Over TIME — tested against a longer record, and it FAILED. ✗** I reported this
+  as the strongest part of the tool. I have withdrawn it.
 
   The original figures (vs CMD ρ = −0.68, vs precipitation ρ = +0.72) were
   correlations over **four points** — the four summer means. Extending the record
   to nine summers (2017–2025, n = 1,377 polygon-summers) did **not** reproduce
   them: network-wide +0.07, within-polygon +0.05, and across the five earlier
-  summers the relationship is *absent* (r = −0.04, p = 0.28) rather than merely
-  weaker. **The two driest summers in the record, 2018 and 2021, come out as the
-  least stressed of the nine.**
+  summers the relationship is *absent* (r = −0.04, p = 0.28) rather than weaker.
+  **The two driest summers in the record, 2018 and 2021, come out as the least
+  stressed of the nine.**
 
-  The cause is the index's own geometry, not the sensor, the imagery, or the
-  length of the record. The dry edge's slope is calibrated on how greenness and
-  canopy-water vary **between corridors** (0.53). Across summers, the same two
-  bands move together at roughly half that rate (0.26). So when a dry summer
-  depresses greenness, the edge falls *faster* than the corridor does, and the
-  resulting gap is read as **water margin** — meaning every dry summer reads
-  wetter, by construction. The four-summer ρ = −0.68 was the same artifact over a
-  record too short to expose it.
+  The cause is the index itself. The dry edge is a line fitted by comparing
+  corridors to each other, and its slope is 0.53. Across summers the same two
+  bands only move at 0.26. So when a dry summer pulls greenness down, the line
+  drops faster than the corridor does, and the index scores that gap as **water
+  margin**. Dry summers come out wetter. The four-summer ρ = −0.68 was the same
+  mistake on a record too short to show it. It is not the sensor or the imagery —
+  rebuilt rasters are bit-identical (r = 1.00000), and refitting the thermal
+  baseline changes nothing.
 
-  Two repairs were tested; neither works as a drop-in. Refitting the dry edge each
-  summer removes the drift but pins the between-summer signal to ~1% of variance
-  and *inverts* the correlation. Re-tilting the edge to the temporal slope restores
-  the correct sign (within-polygon ρ = −0.22, p = 5×10⁻¹⁷), but a line fitted that
-  way is no longer the lower envelope of the feature space — so it is a different
-  index, and would need its own validation before anyone relied on it.
+  I tested two repairs and neither works. Refitting the dry edge each summer
+  removes the drift, but it pins the between-summer signal to ~1% of variance and
+  flips the correlation to the wrong sign. Re-tilting the edge to the temporal
+  slope gives the right sign (within-polygon ρ = −0.22, p = 5×10⁻¹⁷), but that
+  line is no longer the lower edge of the feature space, so it measures something
+  else and would need validating on its own.
 - **BETWEEN corridors — NOT independently confirmed. ✗** An independent radar
   sensor (Sentinel-1 SAR) does **not** corroborate the corridor ranking as water
   stress, and this holds across **all four summers**:
@@ -61,21 +61,20 @@ it against independent measurements. The two axes came out very differently:
   "most-stressed" corridors are largely the densest-canopy ones. This is a stable,
   reproducible property, not a one-year artifact.
 
-**Bottom line:** both validation axes failed, in different ways, and both failures
-are documented here rather than worked around. The **drought-over-time claim is
-withdrawn** — it was an artifact of the index's own geometry. The
-corridor-vs-corridor **ranking is exploratory**, not a validated statement of which
-corridors are physically driest, because it is confounded with canopy density.
+**Bottom line:** both checks failed, for different reasons. The
+**drought-over-time claim is withdrawn** — the index produced it. The
+corridor-vs-corridor **ranking is exploratory**, not a statement of which corridors
+are physically driest, because it is confounded with canopy density.
 
-What the tool does reliably deliver is **coverage**: a reproducible stress ranking
-over all 144 corridors, including ones only 10 m wide, from free public imagery,
-recomputed each summer. That ranking is notably stable — within every summer it is
-preserved at Spearman ρ ≥ 0.855 (≥ 0.97 in seven of nine summers) across the very
-change to the index that destroys its temporal behaviour — but it still inherits
-the canopy confound above. Each summer yields a fresh ranking of corridors against
-each other; it does **not** tell you whether this summer was harder than last. The
-spatial-stress signal only becomes robust where real terrain gradients exist (the
-Fraser transect, Phase 3b) — not across flat Surrey.
+What the tool does deliver is **coverage**: a stress ranking over all 144
+corridors, including ones only 10 m wide, from free public imagery, recomputed
+each summer. That ranking is stable — within every summer it holds at Spearman
+ρ ≥ 0.855 (≥ 0.97 in seven of nine) even under the change to the index that
+destroys its temporal behaviour — but it still carries the canopy confound above.
+Each summer gives a fresh ranking of corridors against each other. It does **not**
+tell you whether this summer was harder than last. The spatial signal only becomes
+robust where real terrain gradients exist (the Fraser transect, Phase 3b), not
+across flat Surrey.
 
 ## What's here
 | file | what it is |
@@ -130,31 +129,30 @@ canopy."
   reason the climate-resolution hypothesis was untestable here (`docs/PHASE3_FINDINGS.md`).
 - **The index cannot compare summers to each other.** Its dry edge encodes a
   between-corridor relationship and is applied to between-summer variation, where
-  that relationship does not hold — so dry summers read wetter by construction (see
-  the TIME note above). This is a property of how the index is built, not something
-  a longer record fixes; nine summers is what revealed it.
+  that relationship does not hold, so dry summers come out wetter (see the TIME
+  note above). This is how the index is built, not something a longer record
+  fixes. Nine summers is what revealed it.
 - Every correlation reported here carries its n: n = 4 for the original
   across-summer figures, n = 612 for the within-polygon ones on the published
   block, n = 1,377 for the nine-summer extension.
 
 ## What is solid, and where to take it next
 - **Solid — coverage and reproducibility.** Every corridor in the network measured
-  the same way, every summer, from free public imagery, at a scale that includes
-  10 m-wide corridors no field programme would survey. The within-summer ranking is
-  stable under a change to the index that destroys its temporal behaviour, so it is
-  not an artifact of one arbitrary construction choice.
+  the same way, every summer, from free public imagery, including 10 m-wide
+  corridors no field programme would survey. The within-summer ranking holds up
+  under a change to the index that destroys its temporal behaviour, so it is not
+  an artifact of one construction choice.
 - **Solid — the negative result.** Finer climate data does not predict corridor
   water stress better than coarse (Phases 3 and 3b). Spend on the site, not on the
   climate product.
-- **Withdrawn — CDEI as a temporal drought monitor.** Previously listed here as the
-  solid axis. The nine-summer extension refuted it and the mechanism is understood;
+- **Withdrawn — CDEI as a temporal drought monitor.** I listed this here as the
+  solid axis. The nine-summer extension refuted it, and the cause is understood;
   see the TIME note above.
-- **Next:** three things, in order of how much they would change the tool.
-  De-confound the ranking from canopy density, which is the headline limitation.
-  Validate CDEI against any ground observation — no in-situ soil moisture exists
-  for these corridors, which is why neither axis could be checked against truth.
-  Then, if a temporal monitor is still wanted, build one on an index whose geometry
-  is calibrated for time rather than retrofitting this one.
+- **Next.** De-confound the ranking from canopy density — that is the headline
+  limitation. Validate CDEI against any ground observation; no in-situ soil
+  moisture exists for these corridors, which is why neither check could be tested
+  against truth. If a temporal monitor is still wanted after that, build it on an
+  index calibrated for time rather than retrofitting this one.
 
 Regenerate: `python -m src.pipeline.corridor_stress -v`
 Validation: `python -m src.pipeline.validate_sar -v` (Sentinel-1 SAR check)
