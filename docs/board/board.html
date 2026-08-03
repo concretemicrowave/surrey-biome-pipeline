@@ -167,10 +167,13 @@ figcaption{font-size:25pt;line-height:1.35;color:var(--ink-2);margin-top:.12in}
     <div class="bar series"><span class="n">3</span><h2>The experiment</h2></div>
     <figure>
       <img src="../figures/board/ab_schematic.png"
-           alt="Surrey corridors under a 750 m grid and a 4 km grid">
-      <figcaption>Two identical forecasting models. Only resolution is
-        manipulated, so any difference in performance must be rooted in fine or
-        coarse resolution data.</figcaption>
+           alt="Surrey corridors. Model A samples a continuous climate field at each
+                corridor's own point; Model B replaces those values with their 4 km
+                cell averages">
+      <figcaption>Two identical forecasting models, same corridors, same
+        variables. Model B is Model A's <em>own</em> values averaged into 4 km
+        cells — not a different dataset — so resolution is the only thing that
+        differs between them.</figcaption>
     </figure>
 
     <div class="photoslot">
@@ -179,7 +182,7 @@ figcaption{font-size:25pt;line-height:1.35;color:var(--ink-2);margin-top:.12in}
         of your own top-ranked corridors. It grounds an abstract satellite project
         in a place a Surrey judge recognises.</p>
       <div class="shot">
-        GIN 36 — McNally Creek &nbsp;49.02052, −122.77180<br>
+        GIN 36 &nbsp;·&nbsp; McNally Creek &nbsp;49.02052, −122.77180<br>
         rank 7 of 144 &nbsp;·&nbsp; High value &nbsp;·&nbsp; ★ priority<br>
         driest third in 4 of 4 summers
       </div>
@@ -193,7 +196,7 @@ figcaption{font-size:25pt;line-height:1.35;color:var(--ink-2);margin-top:.12in}
       <div class="name">JOSHUA WANG</div>
       <div class="meta">FHSS &middot; Grade 10 &middot; South Fraser Regional Science Fair 2027</div>
       <p class="tiny" style="margin-top:.1in">Analysis code and data: link pending release.<br>
-        All imagery Sentinel&#8209;2, Sentinel&#8209;1 and Landsat — free and public.</p>
+        All imagery Sentinel&#8209;2, Sentinel&#8209;1 and Landsat are free and public.</p>
     </div>
   </section>
 
@@ -226,7 +229,7 @@ figcaption{font-size:25pt;line-height:1.35;color:var(--ink-2);margin-top:.12in}
 
         <div class="tile"><div class="stat grey">12.3%</div>
           <p>of spatial detail lost when Surrey's climate data is coarsened. Too
-             flat — the question is unanswerable here.</p></div>
+             flat: the question is unanswerable here.</p></div>
         <div class="tile"><div class="stat series">48.4%</div>
           <p>lost on a 100 km valley transect rising 4–1,920 m. Here, the question
              is answerable.</p></div>
@@ -280,24 +283,26 @@ figcaption{font-size:25pt;line-height:1.35;color:var(--ink-2);margin-top:.12in}
       as exploratory, not as a validated ranking.</p>
 
     <div class="pending">
-      <div class="flag">⏳ RESULT PENDING</div>
+      <div class="flag">⚠ OPEN QUESTION</div>
       <p class="small" style="color:var(--ink);font-weight:600;margin-top:.08in">
-        The satellite record is being extended back to 2017 — nine summers
-        instead of four.</p>
+        The satellite record now runs nine summers, 2017&ndash;2025, instead of
+        four.</p>
       <div class="slot">
-        Correlation with summer moisture deficit &nbsp;·······&nbsp; [ n&nbsp;=&nbsp;9 ]<br>
-        Within-corridor correlation &nbsp;··················&nbsp; [ pending ]
+        Four summers 2022&#8209;2025 &nbsp;····&nbsp; tracks drought, r &minus;0.68<br>
+        Nine summers 2017&#8209;2025 &nbsp;····&nbsp; does not reproduce it
       </div>
-      <p class="tiny" style="margin-top:.1in">On four summers the direction is
-        right but the evidence is thin. Nine is the difference between a hint and
-        a finding.</p>
+      <p class="tiny" style="margin-top:.1in">The two halves of the record
+        disagree, and the split falls exactly on a known Sentinel&#8209;2 processing
+        change, so they may not be comparable imagery. I stopped here rather
+        than report through it. Until that is settled, the drought result stands on
+        four summers, not nine.</p>
     </div>
 
     <div class="bar"><span class="n">7</span><h2>What Surrey should do</h2></div>
     <p class="small">Don't spend on finer climate data, instead, spend on the
-      site: soil, canopy and irrigation. The monitoring method itself works. All
-      144 corridors, including ones only 10 m wide, are measurable from free,
-      repeatable satellite imagery, and completely free.</p>
+      site: soil, canopy and irrigation. What the measurement reliably delivers is
+      coverage: all 144 corridors, including ones only 10 m wide, can be measured
+      from free, public satellite imagery, and measured again every summer.</p>
   </section>
 </div>
 </body>

@@ -5,9 +5,20 @@ where prose works. On a display board a reader gets a few seconds before decidin
 whether to engage, and a diagram survives that where a paragraph does not.
 
 1. ``ab_schematic``  — what the A-vs-B manipulation actually does. Real Surrey
-   corridor geometry under the two grids the experiment compares: the scale-free
-   ~750 m sampling Model A gets, and the 4 km cells Model B averages into. This
-   replaces two boxes of text describing the same thing.
+   corridor geometry and real ClimateBC values: Model A samples the continuous
+   field at each corridor's own point and elevation, Model B averages those same
+   values into 4 km cells. This replaces two boxes of text describing the same
+   thing.
+
+   **Model A is not a grid.** ClimateBC is scale-free — latitude, longitude and
+   elevation in, a value for that exact point out. An earlier version of this
+   figure drew a 750 m mesh and labelled it "Model A's cells", which contradicted
+   the manuscript (§2: "*effective* resolution of roughly 375--750 m", "values
+   *sampled at* each corridor's own location and elevation") and made the design
+   look like the product-swap confound it exists to avoid. The ~375--750 m is the
+   scale of the surface underneath the interpolation, not cells anyone receives,
+   so the left panel draws the field and the sample points and no cell edges at
+   all.
 
 2. ``transect_profile`` — the elevation gradient that made the second extent
    answerable, drawn from the 300 real stand elevations rather than sketched.
@@ -42,8 +53,12 @@ CORRIDORS = paths.INTERIM / "corridors_analysis.gpkg"
 STANDS = paths.INTERIM / "phase3b" / "transect_stands.gpkg"
 TERRAIN = paths.INTERIM / "phase3b" / "terrain_stands.parquet"
 
-# Cell sizes the Surrey experiment actually compared (metres).
-FINE_M, COARSE_M = 750, 4000
+# The one cell size the experiment introduces. Model A has no cell size — it is
+# sampled per corridor — so there is no FINE_M to pair with this.
+COARSE_M = 4000
+# The variable and summer drawn in the schematic. Any climate column works; Tmax
+# is the one a reader can price intuitively.
+SCHEMATIC_VAR, SCHEMATIC_YEAR = "Tmax_sm", 2023
 
 
 def _rc(base_pt: float) -> dict:
@@ -59,29 +74,74 @@ def _rc(base_pt: float) -> dict:
 
 
 def ab_schematic(out: Path, *, size_in=(7.3, 5.1), base_pt: float = 16.0) -> None:
-    """Model A vs Model B, as the grids they actually sample."""
+    """Model A vs Model B: a continuous field sampled, versus that field averaged.
+
+    Both panels draw the *same* real ClimateBC values on the same colour scale.
+    On the left each corridor carries its own; on the right every corridor in a
+    4 km cell carries that cell's mean, so the reader watches the variation
+    collapse rather than being told it does.
+    """
+    from scipy.interpolate import griddata
+
     plt.rcParams.update(_rc(base_pt))
     g = gpd.read_file(CORRIDORS).to_crs("EPSG:26910")
 
-    fig, axes = plt.subplots(1, 2, figsize=size_in)
+    df = pd.read_parquet(paths.FEATURES)
+    df = df[df["year"] == SCHEMATIC_YEAR]
+    px, py = df["x_m"].to_numpy(), df["y_m"].to_numpy()
+    fine = df[SCHEMATIC_VAR].to_numpy()
+
+    # Model B, exactly as experiment.upscale builds it: the mean of the sample
+    # points falling in each cell, so the right panel is the real manipulation
+    # and not a redrawing of it.
+    cell_key = (np.floor(px / COARSE_M).astype(int).astype(str) + "_" +
+                np.floor(py / COARSE_M).astype(int).astype(str))
+    coarse = pd.Series(fine).groupby(cell_key).transform("mean").to_numpy()
+
     x0, y0, x1, y1 = g.total_bounds
+    vmin, vmax = float(fine.min()), float(fine.max())
 
-    for ax, (cell, label, colour) in zip(axes, [
-        (FINE_M,   f"MODEL A — fine\n{FINE_M} m cells", viz.SERIES),
-        (COARSE_M, f"MODEL B — coarse\n{COARSE_M // 1000} km cells", viz.MUTED),
+    # The continuous surface ClimateBC interpolates from. Drawn only on the left,
+    # softly, and with no cell edges anywhere — it is a field, not a raster the
+    # user receives.
+    # NaN outside the convex hull of the sample points is left NaN, so the wash
+    # fades out on an organic boundary. Filling it with `nearest` produced blocky
+    # rectangular patches in the corners — cell-looking artifacts in the one panel
+    # whose entire job is to have no cells.
+    gx, gy = np.meshgrid(np.linspace(x0, x1, 700), np.linspace(y0, y1, 700))
+    field = griddata((px, py), fine, (gx, gy), method="cubic")
+
+    fig, axes = plt.subplots(1, 2, figsize=size_in)
+    cmap = viz.STRESS_CMAP
+
+    for ax, (vals, label, colour, is_a) in zip(axes, [
+        (fine,   "MODEL A — scale-free\nsampled per corridor", viz.SERIES, True),
+        (coarse, f"MODEL B — coarse\n{COARSE_M // 1000} km cells", viz.MUTED, False),
     ]):
-        # Grid first, so the corridors read on top of it.
-        for gx in np.arange(x0 - cell, x1 + cell, cell):
-            ax.plot([gx, gx], [y0, y1], color=colour, lw=0.6, alpha=0.55, zorder=1)
-        for gy in np.arange(y0 - cell, y1 + cell, cell):
-            ax.plot([x0, x1], [gy, gy], color=colour, lw=0.6, alpha=0.55, zorder=1)
-        g.plot(ax=ax, color=viz.INK, linewidth=0.7, zorder=3)
+        if is_a:
+            ax.imshow(field, extent=(x0, x1, y0, y1), origin="lower", cmap=cmap,
+                      vmin=vmin, vmax=vmax, alpha=0.38, interpolation="bilinear",
+                      zorder=0, aspect="equal")
+        else:
+            # Each occupied cell painted with its own mean, on the same scale as
+            # the left panel's wash. This is what "coarse" means, shown rather
+            # than asserted: the smooth field opposite becomes a step function.
+            norm = plt.Normalize(vmin=vmin, vmax=vmax)
+            cm = plt.get_cmap(cmap)
+            for key, mean in pd.Series(fine).groupby(cell_key).mean().items():
+                ix, iy = (int(v) for v in key.split("_"))
+                ax.add_patch(Rectangle((ix * COARSE_M, iy * COARSE_M),
+                                       COARSE_M, COARSE_M,
+                                       facecolor=cm(norm(mean)), alpha=0.38,
+                                       edgecolor="none", zorder=0))
+            for vx in np.arange(x0 - COARSE_M, x1 + COARSE_M, COARSE_M):
+                ax.plot([vx, vx], [y0, y1], color=colour, lw=0.7, alpha=0.65, zorder=1)
+            for vy in np.arange(y0 - COARSE_M, y1 + COARSE_M, COARSE_M):
+                ax.plot([x0, x1], [vy, vy], color=colour, lw=0.7, alpha=0.65, zorder=1)
 
-        # One cell picked out, to make "averaged into this" concrete.
-        cx = x0 + ((x1 - x0) // cell // 2) * cell
-        cy = y0 + ((y1 - y0) // cell // 2) * cell
-        ax.add_patch(Rectangle((cx, cy), cell, cell, facecolor=colour, alpha=0.22,
-                               edgecolor=colour, lw=1.8, zorder=2))
+        g.plot(ax=ax, color=viz.POLY_EDGE, linewidth=0.7, zorder=3)
+        ax.scatter(px, py, c=vals, cmap=cmap, vmin=vmin, vmax=vmax, s=13,
+                   edgecolor=viz.INK, linewidth=0.3, zorder=4)
 
         ax.set_title(label, color=colour, pad=base_pt * 0.7)
         ax.set_xlim(x0, x1)
@@ -90,14 +150,18 @@ def ab_schematic(out: Path, *, size_in=(7.3, 5.1), base_pt: float = 16.0) -> Non
         ax.set_axis_off()
 
     fig.text(0.5, 0.015,
-             "Identical corridors, identical variables. Only the cell the climate "
-             "is averaged over differs.",
-             ha="center", va="bottom", fontsize=base_pt * 0.82, color=viz.INK_2)
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+             "Identical corridors, identical variables, one colour scale. Model A "
+             "samples the field at each\ncorridor's own point and elevation; Model B "
+             "replaces that with its 4 km cell's average.",
+             ha="center", va="bottom", fontsize=base_pt * 0.78, color=viz.INK_2)
+    fig.tight_layout(rect=(0, 0.09, 1, 1))
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=600, bbox_inches="tight")
     plt.close(fig)
-    print(f"wrote {out}  ({len(g)} corridors, {FINE_M} m vs {COARSE_M} m)")
+    kept = 1 - np.var(coarse) / np.var(fine)
+    print(f"wrote {out}  ({len(g)} corridors, {SCHEMATIC_VAR} {SCHEMATIC_YEAR}, "
+          f"{pd.Series(cell_key).nunique()} cells at {COARSE_M} m, "
+          f"{kept * 100:.0f}% of the point variance removed)")
 
 
 def transect_profile(out: Path, *, size_in=(7.3, 3.8), base_pt: float = 16.0) -> None:
