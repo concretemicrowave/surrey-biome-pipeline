@@ -54,6 +54,29 @@ var NEVER_SAY  = CENTRE.neverSay   || [];
 var LABS       = CENTRE.labs       || [];
 var METHOD     = CENTRE.method     || [];
 
+/* ---- The end-of-lesson quiz ------------------------------------------------
+   Opt-in. A centre that declares no `quiz` block gets exactly the site it had:
+   flashcards as the drill, mastery computed from them, every string unchanged.
+
+   Where a centre does declare one, three things move. A lesson now ends in a
+   graded quiz rather than in a link to a deck; the status word — solid, shaky,
+   weak — is computed from that quiz rather than from card statistics; and the
+   flashcards stop being the thing you are sent to after reading and become the
+   thing the scheduler asks for later, surfaced on a concept only when cards for
+   it are actually due.
+
+   That ordering is the point. A flashcard is a retention instrument: it is
+   excellent at keeping something you already understand, and close to useless at
+   telling you whether you understood it in the first place, because grading
+   yourself on a card you have just read the back of measures recognition. A
+   multiple-choice item with authored distractors measures something a self-grade
+   cannot — whether you can tell the right account from the three plausible wrong
+   ones. So the quiz decides the verdict, and the cards keep what the verdict
+   found. */
+var QUIZ_CFG = CENTRE.quiz || null;
+var QUIZ     = (QUIZ_CFG && QUIZ_CFG.items) || [];
+var QUIZ_ON  = !!(QUIZ_CFG && QUIZ.length);
+
 /* The question-bank view's framing. The engine underneath — pick by preset,
    answer before revealing, self-score green/amber/red, reds come back — is the
    same wherever it runs; what changes is who is asking. Surrey is being
@@ -161,6 +184,7 @@ var S = {
   explain:{},    /* conceptId -> {text, t}   your own words, written before the site's */
   pretests:{},   /* conceptId -> {guess, t}  what you said before you had read anything */
   recalls:[],    /* {t, scope, label, got, total, text} — free-recall attempts */
+  quiz:{},       /* conceptId -> {attempts, best, last:{t,n,correct,score,answers:[]}} */
   autoplay:true, /* roll straight into the next concept when you reach the end of one */
   notesOpen:true,/* the bullet digest at the top of a lesson, open or collapsed */
   v:1
@@ -182,6 +206,7 @@ function load(){
       S.explain   = d.explain   || {};
       S.pretests  = d.pretests  || {};
       S.recalls   = d.recalls   || [];
+      S.quiz      = d.quiz      || {};
       S.autoplay  = d.autoplay !== false;   /* default on; `|| true` would pin it on */
       S.notesOpen = d.notesOpen !== false;
     }
@@ -313,7 +338,49 @@ function questionsFor(cid){
   }
   return out;
 }
+/* ---- Quiz lookups ----------------------------------------------------------
+   `quizFor` is the whole quiz for a concept: every item that names it, in
+   authored order. An attempt serves all of them rather than a sample, so a
+   score is a statement about the concept and not about which four items came
+   up — with four to six items a sample would mostly measure the draw. */
+function quizFor(cid){
+  var out=[]; for (var i=0;i<QUIZ.length;i++) if (QUIZ[i].conceptId===cid) out.push(QUIZ[i]); return out;
+}
+function quizState(cid){ return S.quiz[cid] || null; }
+function quizTaken(cid){ var q = S.quiz[cid]; return !!(q && q.last); }
+/* The score that counts is the LATEST attempt, not the best one. A quiz you
+   passed in June and failed in August is a concept you have lost, and a store
+   that keeps the June number would report it as solid for as long as you never
+   touched it again. `best` is kept for the history line and never for a verdict. */
+function quizScore(cid){
+  var q = S.quiz[cid];
+  return (q && q.last) ? q.last.score : null;
+}
+/* Concepts you have read but never been tested on. This is the nav badge, and
+   it is deliberately not "concepts with a weak score": a weak score is work the
+   scheduler already knows about, whereas an unquizzed lesson is a concept you
+   have no evidence about at all. */
+function quizOwed(){
+  var out=[];
+  for (var i=0;i<CONCEPTS.length;i++){
+    var c = CONCEPTS[i], L = S.lessons[c.id];
+    if (L && L.read && !quizTaken(c.id) && quizFor(c.id).length) out.push(c);
+  }
+  return out;
+}
 function conceptMastery(cid){
+  /* Where a centre runs quizzes, the quiz IS the mastery — one number, from the
+     one instrument that grades itself, so the word on the tile and the word on
+     the results page can never disagree. Cards and spoken questions still run
+     the schedule underneath; they no longer vote on the verdict.
+
+     The fall-through matters: a concept with no attempt yet is scored the old
+     way rather than as zero, so a centre that turns quizzes on does not wipe the
+     colour off every tile of a course somebody was halfway through. */
+  if (QUIZ_ON && QUIZ_CFG.drivesMastery !== false && quizFor(cid).length){
+    var qs = quizScore(cid);
+    if (qs !== null) return qs;
+  }
   var vals=[], w=[];
   var cs = cardsFor(cid), i, s;
   for (i=0;i<cs.length;i++){ s = cardScore(cs[i].id); if (s!==null){ vals.push(s); w.push(1); } }
@@ -673,6 +740,10 @@ function renderNav(){
       var rq = redQuestions().length;
       if (rq) extra = '<span class="count hot">'+rq+'</span>';
     }
+    if (t.id === "quiz"){
+      var qo = quizOwed().length;
+      if (qo) extra = '<span class="count hot">'+qo+'</span>';
+    }
     if (t.id === "learn"){
       var fc = flaggedConcepts().length;
       if (fc) extra = '<span class="count">'+fc+'</span>';
@@ -796,9 +867,12 @@ VIEWS.overview = function(){
     resumeCta(null, S.sessions.length ? "Pick up where you left off" : "Start here")+
 
     '<h2 class="sec">Your three weakest areas</h2>'+
-    '<p class="muted" style="margin:-4px 0 12px;max-width:42rem">Computed from card performance and '+
-      'mock-interview scores. Drill these first — that is the instruction in the coach brief, and it is '+
-      'the whole reason this page exists.</p>'+
+    '<p class="muted" style="margin:-4px 0 12px;max-width:42rem">'+
+      (QUIZ_ON && QUIZ_CFG.drivesMastery !== false
+        ? 'Computed from your latest quiz score on each concept — the one instrument here that marks '+
+          'you rather than asking you to mark yourself. Reread these, then retake them.'
+        : 'Computed from card performance and mock-interview scores. Drill these first — that is the '+
+          'instruction in the coach brief, and it is the whole reason this page exists.')+'</p>'+
     weakHtml +
 
     '<h2 class="sec">Start here</h2>'+
@@ -1137,8 +1211,53 @@ function lessonView(id){
     body += '</div>';
   }
 
-  var myCards = cardsFor(id), myQs = questionsFor(id);
-  if (myCards.length || myQs.length){
+  var myCards = cardsFor(id), myQs = questionsFor(id), myQuiz = QUIZ_ON ? quizFor(id) : [];
+  /* ---- What a lesson ends in -----------------------------------------------
+     With a quiz in play this is the whole close of the lesson: the graded thing
+     first, at full width, and the two ungraded instruments beneath it. The
+     flashcard tile is the one that moves. It appears when the scheduler is
+     asking for cards back and not before, because "drill this now" is the wrong
+     instruction at the bottom of a first reading — you would be rehearsing a
+     thing you have not yet been shown you understand. */
+  if (myQuiz.length){
+    body += quizCta(c, myQuiz);
+    var dueHere = 0, unseenHere = 0;
+    for (i=0;i<myCards.length;i++){
+      if (isDue(myCards[i].id)) dueHere++;
+      if (isNew(myCards[i].id)) unseenHere++;
+    }
+    var secondary = "";
+    if (dueHere){
+      secondary += '<div class="card"><div class="eyebrow">Owed today</div>'+
+        '<div style="font-size:22px;font-weight:700;margin:2px 0 4px" class="num">'+dueHere+
+          '<span class="faint" style="font-size:15px">/'+myCards.length+'</span></div>'+
+        '<div class="faint" style="font-size:12px;margin-bottom:8px">flashcards due — the interval '+
+          'has expired on these, which is the one moment rehearsing them is worth anything</div>'+
+        '<div class="btnrow"><a class="btn sm" href="#/cards/'+id+'">Review the '+dueHere+' due</a>'+
+        '<a class="btn sm" href="#/recall/'+id+'">Blank page</a></div></div>';
+    }
+    if (myQs.length){
+      var qlist2 = "";
+      for (i=0;i<myQs.length;i++){
+        var st2 = S.questions[myQs[i].id];
+        qlist2 += '<li>'+md(myQs[i].prompt)+
+          (st2 && st2.last ? ' <span class="pill p-'+(st2.last==="green"?"green":st2.last==="amber"?"yellow":"red")+
+            '"><span class="dot"></span>'+st2.last+'</span>' : '')+'</li>';
+      }
+      secondary += '<div class="card"><div class="eyebrow">Say it out loud</div>'+
+        '<ul style="margin:8px 0 10px;padding-left:18px;font-size:13px;line-height:1.6">'+qlist2+'</ul>'+
+        '<a class="btn sm" href="#/mock/concept:'+id+'">Run these as an interview</a></div>';
+    }
+    if (secondary) body += '<h2 class="sec">Then, when they are owed</h2><div class="grid g2">'+secondary+'</div>';
+    if (!dueHere && myCards.length){
+      body += '<p class="faint" style="font-size:12px;margin-top:10px">'+myCards.length+
+        ' flashcard'+(myCards.length===1?'':'s')+' carry this concept'+
+        (unseenHere === myCards.length ? ' and none has been shown yet' : '')+
+        ' — none due today. <a href="#/cards/'+id+'">Work them early</a> if you want to, but the '+
+        'schedule will ask for them on its own.</p>';
+    }
+  }
+  else if (myCards.length || myQs.length){
     body += '<h2 class="sec">Test yourself on this</h2><div class="grid g2">';
     if (myCards.length){
       /* Rawson & Dunlosky's criterion, shown as a fraction rather than a
@@ -1183,7 +1302,22 @@ function lessonView(id){
      answer — sending someone onward from a half-learned prerequisite is how the
      dependency order stops meaning anything. */
   var here = conceptStats(c);
-  if (here.n && here.seen < here.n){
+  if (here.qn && !here.qtaken){
+    /* The gate on moving on is the quiz, not the deck. It is a soft gate — the
+       link onward is right there — but the sentence says what the cost is,
+       which is the part a bare "next" cannot say. */
+    body += '<div class="card" style="margin-top:18px;max-width:46rem">'+
+      '<div class="eyebrow">Before moving on</div>'+
+      '<div style="font-weight:600;font-size:15px;margin:4px 0 2px">'+here.qn+
+        ' question'+(here.qn===1?'':'s')+' on this concept, graded</div>'+
+      '<div class="muted" style="font-size:13px">Reading it and understanding it feel the same '+
+        'from the inside; the quiz is the only thing here that can tell them apart. It sets this '+
+        'concept’s status word and unlocks what comes after it.</div>'+
+      '<div class="btnrow" style="margin-top:10px">'+
+      '<a class="btn primary" href="#/quiz/'+c.id+'">Take the quiz</a>'+
+      '<a class="btn ghost" href="#/map">See the order</a></div></div>';
+  }
+  else if (!here.qn && here.n && here.seen < here.n){
     body += '<div class="card" style="margin-top:18px;max-width:46rem">'+
       '<div class="eyebrow">Before moving on</div>'+
       '<div style="font-weight:600;font-size:15px;margin:4px 0 2px">'+
@@ -1273,6 +1407,363 @@ AFTER.learn = function(arg){
 };
 
 /* ===========================================================================
+   VIEW · THE QUIZ
+
+   What a lesson ends in, and the one instrument here that grades you rather
+   than asking you to grade yourself.
+
+   Everything else on this site takes your word for it. A flashcard shows you
+   the back and asks whether you knew it; the mock interview asks you to score
+   your own spoken answer green, amber or red. Both are honest instruments in
+   the hands of someone honest, and both measure recognition when they are not,
+   because reading a correct answer produces the feeling of having known it —
+   the fluency illusion, and the reason Dunlosky et al. (2013) rate rereading so
+   low. A four-option item with authored distractors cannot be gamed that way.
+   You commit before anything is revealed, and the score is arithmetic.
+
+   Three decisions worth naming:
+
+   1. **Grading happens at the end, not per question.** Immediate marking turns
+      a quiz into a sequence of independent guesses with feedback — you learn
+      what the answer was, and you also learn how you are doing, which changes
+      how you answer the rest. Holding the mark to the end keeps the attempt one
+      measurement of one concept.
+   2. **Both orders are shuffled, and the shuffle is reseeded on every retake.**
+      Position is the cheapest thing to memorise and the least worth knowing.
+      Because the options move, the stored answer index and the `whyNot` list are
+      always read against the ORIGINAL order — see `whyNotFor`, which is where
+      that arithmetic lives so it exists in exactly one place.
+   3. **The whole quiz is served, not a sample.** With four to six items a
+      sample would mostly measure the draw.
+
+   The verdict words are the site's existing three — solid, shaky, weak — on the
+   thresholds `masteryWord` already used, so the word on the results page and
+   the word on the concept tile can never disagree.
+   =========================================================================== */
+var quizRun = null;   /* this page load only; a reload starts the attempt over */
+
+/* The wrong-answer note for one option, indexed against the authored order.
+   `whyNot` carries one entry per WRONG option, so the correct answer's slot is
+   not in the list and everything after it shifts down by one. Getting this off
+   by one shows every wrong answer somebody else's explanation, which reads as
+   plausible nonsense rather than as a bug — so it is written once, here. */
+function whyNotFor(item, orig){
+  if (!item.whyNot || orig === item.answer) return "";
+  return item.whyNot[orig < item.answer ? orig : orig - 1] || "";
+}
+function startQuiz(cid){
+  var items = quizFor(cid), st = S.quiz[cid];
+  var seed = (((st && st.attempts) || 0) + 1) * 7919 + fnv1a(cid);
+  var order = shuffle(items, seed);
+  var run = {cid:cid, ids:[], opts:{}, picked:{}, graded:false};
+  for (var i=0;i<order.length;i++){
+    var it = order[i], idx = [];
+    for (var k=0;k<it.options.length;k++) idx.push(k);
+    run.ids.push(it.id);
+    run.opts[it.id] = shuffle(idx, seed + i*31 + 17);
+  }
+  return run;
+}
+function quizItemById(id){
+  for (var i=0;i<QUIZ.length;i++) if (QUIZ[i].id === id) return QUIZ[i];
+  return null;
+}
+function gradeQuiz(run){
+  var answers = [], correct = 0, i;
+  for (i=0;i<run.ids.length;i++){
+    var it = quizItemById(run.ids[i]);
+    if (!it) continue;
+    var p = run.picked[it.id], ok = (p === it.answer);
+    if (ok) correct++;
+    answers.push({id:it.id, picked:p, ok:ok});
+  }
+  var n = answers.length, score = n ? correct/n : 0, t = Date.now();
+  var rec = S.quiz[run.cid] || (S.quiz[run.cid] = {attempts:0, best:0, history:[]});
+  rec.attempts = (rec.attempts||0) + 1;
+  rec.best = Math.max(rec.best||0, score);
+  rec.last = {t:t, n:n, correct:correct, score:score, answers:answers};
+  (rec.history = rec.history || []).push({t:t, score:score});
+  /* Logged as a session so the progress table and the "sessions" counter see
+     quiz work as work. Green/red rather than green/amber/red: an item is right
+     or it is not, and there is no half mark to invent. */
+  var c = byId(run.cid);
+  S.sessions.push({t:t, preset:"quiz · "+(c ? c.title : run.cid), n:n,
+                   green:correct, amber:0, red:n-correct});
+  run.graded = true;
+  save();
+}
+/* The three bands, and what each one should make you do next. The thresholds
+   are `masteryWord`'s, restated as a sentence rather than as a colour. */
+function quizVerdict(score){
+  if (score >= 0.75) return {word:"solid", cls:"p-green",
+    line:"You could tell the right account from three that were written to sound right. Leave it "+
+         "to the scheduler now — the flashcards will bring it back before it decays."};
+  if (score >= 0.40) return {word:"shaky", cls:"p-yellow",
+    line:"Part of this is holding and part of it is not, which is the hardest state to notice from "+
+         "the inside. Read the misses below, then reread the concept — not the whole page, the "+
+         "paragraph each miss came from — and retake it."};
+  return {word:"weak", cls:"p-red",
+    line:"This one did not go in. That is information, not a verdict on you: it means the reading "+
+         "produced recognition rather than understanding, which is exactly what a quiz exists to "+
+         "catch. Go back to the concept and read it as an answer to the questions you just missed."};
+}
+/* The end-of-lesson block. Before an attempt it is the call to action; after
+   one it is the standing verdict, which is also the concept's status word. */
+function quizCta(c, items){
+  var st = quizState(c.id), n = items.length;
+  var h = '<h2 class="sec">'+(st && st.last ? "Your quiz on this concept" : "Now sit the quiz")+'</h2>'+
+    '<div class="card quizcta">';
+  if (st && st.last){
+    var v = quizVerdict(st.last.score);
+    h += '<div class="qz-head">'+
+        '<span class="pill '+v.cls+'"><span class="dot"></span>'+v.word+'</span>'+
+        '<span class="qz-score num">'+st.last.correct+'<span class="faint">/'+st.last.n+'</span></span>'+
+        '<span class="faint" style="font-size:12px">'+fmtDate(st.last.t)+
+          ' · attempt '+st.attempts+'</span>'+
+      '</div>'+
+      '<div class="bar" style="margin:10px 0 8px"><i style="width:'+Math.round(st.last.score*100)+
+        '%;background:'+(st.last.score>=0.75?"var(--pill-green-dot)":st.last.score>=0.4?"var(--pill-yellow-dot)":"var(--pill-red-dot)")+'"></i></div>'+
+      '<div class="muted" style="font-size:13px">'+v.line+'</div>'+
+      '<div class="btnrow" style="margin-top:12px">'+
+        '<a class="btn primary" href="#/quiz/'+c.id+'">Retake it</a>'+
+        '<a class="btn" href="#/quiz/'+c.id+'?review">See what you missed</a></div>';
+  } else {
+    h += '<div style="font-weight:600;font-size:15px;margin:0 0 2px">'+n+' question'+(n===1?'':'s')+
+        ', graded at the end</div>'+
+      '<div class="muted" style="font-size:13px">Answer all '+n+', then it marks the lot and gives '+
+        'this concept a word: <strong>solid</strong>, <strong>shaky</strong> or <strong>weak</strong>. '+
+        'Nothing is revealed until you have committed to every answer — that is what makes the '+
+        'result worth having.</div>'+
+      '<div class="btnrow" style="margin-top:12px">'+
+        '<a class="btn primary" href="#/quiz/'+c.id+'">Take the quiz</a></div>';
+  }
+  return h + '</div>';
+}
+
+VIEWS.quiz = function(arg){
+  if (!QUIZ_ON) return '<div class="page"><p class="empty">This centre has no quizzes.</p></div>';
+  if (!arg) return quizIndex();
+
+  /* `#/quiz/<id>?review` reopens the last marked attempt without starting a new
+     one — the link from a lesson that has already been quizzed. */
+  var review = /\?review$/.test(arg);
+  var cid = arg.replace(/\?.*$/, "");
+  var c = byId(cid);
+  if (!c) return '<div class="page"><p class="empty">No concept with id <code>'+esc(cid)+'</code>.</p></div>';
+  var items = quizFor(cid);
+  if (!items.length){
+    return '<div class="page narrow"><div class="title"><h1>'+esc(c.title)+'</h1></div>'+
+      '<p class="empty">No quiz has been written for this concept yet.</p>'+
+      '<div class="btnrow"><a class="btn" href="#/learn/'+cid+'">Back to the lesson</a></div></div>';
+  }
+  if (review){
+    var strec = quizState(cid);
+    if (strec && strec.last) return quizResult(c, strec.last, false);
+    return quizResult(c, null, false);
+  }
+  if (!quizRun || quizRun.cid !== cid) quizRun = startQuiz(cid);
+  if (quizRun.graded){
+    var rec = quizState(cid);
+    return quizResult(c, rec && rec.last, true);
+  }
+
+  var answered = 0, i;
+  for (i=0;i<quizRun.ids.length;i++) if (quizRun.picked[quizRun.ids[i]] !== undefined) answered++;
+  var n = quizRun.ids.length;
+
+  var html = '<div class="page narrow">'+
+    '<div class="eyebrow">'+esc(groupOf(c.group).label)+'</div>'+
+    '<div class="title" style="margin-top:6px"><span class="emo">📝</span><h1>'+esc(c.title)+'</h1></div>'+
+    '<p class="lede">'+n+' question'+(n===1?'':'s')+'. Nothing is marked until you have answered all '+
+      'of them, and you can change any answer until you do. Then it grades the lot.</p>'+
+    '<div class="qz-prog"><div class="bar"><i style="width:'+Math.round(answered/n*100)+'%"></i></div>'+
+      '<span class="faint" style="font-size:12px">'+answered+' of '+n+' answered</span></div>'+
+    '<ol class="qzlist">';
+
+  for (i=0;i<n;i++){
+    var it = quizItemById(quizRun.ids[i]);
+    if (!it) continue;
+    var order = quizRun.opts[it.id], picked = quizRun.picked[it.id];
+    html += '<li class="qz"><div class="qz-stem">'+md(it.stem)+'</div><div class="qz-opts">';
+    for (var k=0;k<order.length;k++){
+      var o = order[k];
+      html += '<button class="qz-opt'+(picked === o ? " picked" : "")+'" '+
+        'data-pick="'+esc(it.id)+'|'+o+'" aria-pressed="'+(picked===o?"true":"false")+'">'+
+        '<span class="qz-let">'+String.fromCharCode(65+k)+'</span>'+
+        '<span class="qz-txt">'+md(it.options[o])+'</span></button>';
+    }
+    html += '</div></li>';
+  }
+  html += '</ol>'+
+    '<div class="qz-submit">'+
+      (answered === n
+        ? '<button class="btn primary" data-act="grade">Grade it</button>'
+        : '<button class="btn primary" disabled>Answer all '+n+' to grade ('+(n-answered)+' left)</button>')+
+      '<a class="btn ghost" href="#/learn/'+cid+'">Back to the lesson</a>'+
+    '</div>'+
+  '</div>';
+  return html;
+};
+
+/* The marked attempt. `fresh` distinguishes the moment you just finished one
+   from a later look at it: only the first arms the onward CTA, for the same
+   reason autoplay lives on the deck-cleared screen and nowhere else. */
+function quizResult(c, last, fresh){
+  if (!last){
+    return '<div class="page narrow"><div class="title"><h1>'+esc(c.title)+'</h1></div>'+
+      '<p class="empty">You have not sat this quiz yet.</p>'+
+      '<div class="btnrow"><a class="btn primary" href="#/quiz/'+c.id+'">Take it</a>'+
+      '<a class="btn" href="#/learn/'+c.id+'">Back to the lesson</a></div></div>';
+  }
+  var v = quizVerdict(last.score), i;
+  var html = '<div class="page narrow">'+
+    '<div class="eyebrow">'+esc(groupOf(c.group).label)+'</div>'+
+    '<div class="title" style="margin-top:6px"><h1>'+esc(c.title)+'</h1></div>'+
+    '<div class="qz-verdict '+v.cls+'">'+
+      '<div class="qv-word">'+v.word+'</div>'+
+      '<div class="qv-score num">'+last.correct+'<span class="faint">/'+last.n+'</span></div>'+
+      '<div class="qv-line">'+v.line+'</div>'+
+    '</div>'+
+    '<p class="muted" style="max-width:44rem">This is now the status word for this concept '+
+      'everywhere on the site — on its tile, in the dependency map, and in the weakest-areas list. '+
+      'It moves when you retake the quiz, and only then.</p>'+
+    '<h2 class="sec">Every question, and why</h2>'+
+    '<p class="muted" style="margin:-4px 0 12px;max-width:44rem">Read the ones you got right too. '+
+      'A right answer for the wrong reason is the most expensive thing you can carry into an exam, '+
+      'and the note under each item is where you find out which kind you had.</p>'+
+    '<ol class="qzlist marked">';
+
+  for (i=0;i<last.answers.length;i++){
+    var a = last.answers[i], it = quizItemById(a.id);
+    if (!it) continue;
+    html += '<li class="qz '+(a.ok?"ok":"bad")+'">'+
+      '<div class="qz-stem">'+md(it.stem)+'</div>'+
+      '<div class="qz-opts marked">';
+    for (var k=0;k<it.options.length;k++){
+      var cls = k === it.answer ? "right" : (k === a.picked ? "wrong" : "");
+      var tag = k === it.answer ? '<span class="qz-tag">correct</span>'
+              : (k === a.picked ? '<span class="qz-tag">you</span>' : '');
+      html += '<div class="qz-opt done '+cls+'"><span class="qz-let">'+String.fromCharCode(65+k)+'</span>'+
+        '<span class="qz-txt">'+md(it.options[k])+'</span>'+tag+'</div>';
+    }
+    html += '</div>'+
+      '<div class="qz-why"><strong>'+(a.ok?"Why that is right.":"The right answer.")+'</strong> '+
+        md(it.why)+'</div>';
+    if (!a.ok){
+      var wn = whyNotFor(it, a.picked);
+      if (wn) html += '<div class="qz-whynot"><strong>What you picked, and why it fails.</strong> '+
+        md(wn)+'</div>';
+    }
+    if (it.source) html += '<div class="qz-src faint">'+esc(it.source)+'</div>';
+    html += '</li>';
+  }
+  html += '</ol>'+
+    '<div class="btnrow" style="margin-top:18px">'+
+      '<a class="btn primary" href="#/learn/'+c.id+'">Back to the concept</a>'+
+      '<button class="btn" data-act="requiz">Retake it now</button>'+
+      '<a class="btn ghost" href="#/quiz">All quizzes</a>'+
+    '</div>';
+  /* Onward only on a solid pass, and only on the attempt you just finished.
+     Being carried to the next concept off a weak score would be the site
+     agreeing that you were done.
+
+     A link, never a countdown. The marked page is the one page here you are
+     meant to sit and read — the misses, and the notes under the ones you got
+     right — and a timer that navigates away while you are doing that would
+     take back the whole point of grading at the end. Autoplay stays where it
+     was: the deck-cleared screen, and nowhere else. */
+  if (fresh && last.score >= 0.75) html += resumeCta(c.id, "Next");
+  return html + '</div>';
+}
+
+CLICKS.quiz = function(e, arg){
+  var t = e.target.closest ? e.target.closest("[data-pick],[data-act]") : null;
+  if (!t) return;
+  var pick = t.getAttribute("data-pick");
+  if (pick && quizRun && !quizRun.graded){
+    var bits = pick.split("|");
+    quizRun.picked[bits[0]] = parseInt(bits[1], 10);
+    render();
+    return;
+  }
+  var act = t.getAttribute("data-act");
+  if (act === "grade" && quizRun && !quizRun.graded){
+    gradeQuiz(quizRun);
+    render();
+    /* A marked page that opens halfway down is a page whose verdict you never
+       see. The view is replaced wholesale, so this is the one place a scroll
+       reset is right. */
+    var v = document.getElementById("view");
+    if (v) v.scrollTop = 0;
+    return;
+  }
+  if (act === "requiz"){
+    quizRun = startQuiz(arg.replace(/\?.*$/, ""));
+    render();
+    return;
+  }
+};
+
+/* The index: what has been tested, what is owed, and what came back weak. */
+function quizIndex(){
+  var owed = quizOwed(), rows = [], i, solid = 0;
+  for (i=0;i<CONCEPTS.length;i++){
+    var c = CONCEPTS[i];
+    if (!quizFor(c.id).length || !quizTaken(c.id)) continue;
+    var s = quizScore(c.id);
+    if (s >= 0.75) solid++;
+    rows.push({c:c, s:s});
+  }
+  rows.sort(function(a,b){ return a.s - b.s; });
+
+  var covered = 0;
+  for (i=0;i<CONCEPTS.length;i++) if (quizFor(CONCEPTS[i].id).length) covered++;
+
+  var html = '<div class="page">'+
+    '<div class="title"><span class="emo">📝</span><h1>Quizzes</h1></div>'+
+    '<p class="lede">One graded quiz per concept, sat at the end of the lesson. It is the only '+
+      'thing here that marks you rather than asking you to mark yourself, which is why it — and '+
+      'not your flashcard streak — decides whether a concept reads solid, shaky or weak.</p>'+
+    '<div class="grid g3" style="margin-top:22px">'+
+      '<div class="card stat"><div class="k">Quizzed</div><div class="v">'+rows.length+
+        '<span class="faint" style="font-size:16px">/'+covered+'</span></div>'+
+        '<div class="s">'+(covered-rows.length)+' never sat</div></div>'+
+      '<div class="card stat"><div class="k">Owed</div><div class="v">'+owed.length+'</div>'+
+        '<div class="s">'+(owed.length ? 'read but not tested' : 'nothing read and untested')+'</div></div>'+
+      '<div class="card stat"><div class="k">Solid</div><div class="v">'+solid+'</div>'+
+        '<div class="s">'+(rows.length-solid)+' below that</div></div>'+
+    '</div>';
+
+  if (owed.length){
+    html += '<h2 class="sec">Read, not yet tested</h2>'+
+      '<p class="muted" style="margin:-4px 0 12px;max-width:44rem">You have worked through these '+
+        'lessons and there is no evidence either way about what stuck. Cheapest possible '+
+        'information — a quiz is four questions.</p><div class="btnrow">';
+    for (i=0;i<owed.length;i++)
+      html += '<a class="btn sm" href="#/quiz/'+owed[i].id+'">'+esc(owed[i].title)+'</a>';
+    html += '</div>';
+  }
+
+  if (rows.length){
+    html += '<h2 class="sec">Sat, weakest first</h2><div class="tscroll"><table class="t">'+
+      '<thead><tr><th>Concept</th><th>Verdict</th><th class="n">Score</th><th>When</th><th></th></tr></thead><tbody>';
+    for (i=0;i<rows.length;i++){
+      var r = rows[i], v = quizVerdict(r.s), st = quizState(r.c.id);
+      html += '<tr><td><a href="#/learn/'+r.c.id+'">'+esc(r.c.title)+'</a></td>'+
+        '<td><span class="pill '+v.cls+'"><span class="dot"></span>'+v.word+'</span></td>'+
+        '<td class="n">'+st.last.correct+'/'+st.last.n+'</td>'+
+        '<td class="n">'+fmtDate(st.last.t)+'</td>'+
+        '<td><a class="btn sm" href="#/quiz/'+r.c.id+'">retake</a></td></tr>';
+    }
+    html += '</tbody></table></div>';
+  } else if (!owed.length){
+    html += '<p class="empty" style="margin-top:20px">Nothing sat yet. Open a concept — the quiz '+
+      'is at the bottom of the lesson, and it is how the concept gets its status word.</p>';
+  }
+  return html + '</div>';
+}
+
+/* ===========================================================================
    VIEW · DEPENDENCY MAP
    Layered DAG, depth = longest path from a root. Hand-rolled because pulling in
    a graph library would mean a CDN, and this file has to work offline.
@@ -1330,11 +1821,23 @@ function conceptStats(c){
     }
   }
   var L = S.lessons[c.id], read = !!(L && L.read), n = cards.length, phase;
-  if (n === 0)          phase = read ? "solid" : "new";   /* nothing to drill */
+  var qn = QUIZ_ON ? quizFor(c.id).length : 0, qt = qn ? quizTaken(c.id) : false;
+  if (qn){
+    /* With a quiz in play the milestone is the quiz, not the deck. Cards are no
+       longer the evidence that a concept was worked, so counting unseen cards as
+       "part attempted" would leave every quizzed concept stuck in `learning`
+       for as long as its deck went untouched — and `learning` is what the
+       dependency walk reads as unfinished business. Sitting the quiz closes the
+       concept; due cards then reopen it exactly as they always did. */
+    if (!qt)   phase = read ? "learning" : "new";
+    else       phase = due ? "due" : "solid";
+  }
+  else if (n === 0)     phase = read ? "solid" : "new";   /* nothing to drill */
   else if (seen === 0)  phase = read ? "learning" : "new";
   else if (seen < n)    phase = "learning";
   else                  phase = due ? "due" : "solid";
   return {n:n, seen:seen, due:due, overdue:over, crit:crit, read:read, phase:phase,
+          qn:qn, qtaken:qt, qscore:qn ? quizScore(c.id) : null,
           mastery:conceptMastery(c.id)};
 }
 /* Covered = worked through once, so downstream concepts are unblocked. A due
@@ -1434,7 +1937,9 @@ function nextConcept(afterId){
 }
 function nextRow(rank, item){
   var c = item.c, g = groupOf(c.group), s = item.stats, tag = "";
-  if (s.phase === "learning" && s.n){
+  if (s.phase === "learning" && s.qn){
+    tag = '<span class="pill p-yellow"><span class="dot"></span>read, not quizzed</span>';
+  } else if (s.phase === "learning" && s.n){
     tag = '<span class="pill p-yellow"><span class="dot"></span>'+s.seen+'/'+s.n+' seen</span>';
   } else if (s.phase === "due"){
     tag = '<span class="pill p-blue"><span class="dot"></span>'+s.due+' due'+
@@ -3510,11 +4015,12 @@ CLICKS.progress = function(e){
         S.labs = d.labs||{}; S.flags = d.flags||{};
         S.conf = d.conf||{}; S.explain = d.explain||{};
         S.pretests = d.pretests||{}; S.recalls = d.recalls||[];
+        S.quiz = d.quiz||{};
         S.autoplay = d.autoplay !== false;
         S.notesOpen = d.notesOpen !== false;
         save();
         fb.innerHTML = '<span class="pill p-green"><span class="dot"></span>restored</span>';
-        deck = null; sess = null;
+        deck = null; sess = null; quizRun = null;
         setTimeout(render, 400);
       }catch(e3){
         fb.innerHTML = '<span class="pill p-red"><span class="dot"></span>that is not valid progress JSON</span>';
@@ -3523,9 +4029,9 @@ CLICKS.progress = function(e){
     if (act === "wipe"){
       if (t.getAttribute("data-armed")){
         S.cards={}; S.questions={}; S.lessons={}; S.sessions=[]; S.labs={}; S.flags={};
-        S.conf={}; S.explain={}; S.pretests={}; S.recalls=[];
+        S.conf={}; S.explain={}; S.pretests={}; S.recalls=[]; S.quiz={};
         S.autoplay=true; S.notesOpen=true;
-        save(); deck=null; sess=null; render();
+        save(); deck=null; sess=null; quizRun=null; render();
       } else {
         t.setAttribute("data-armed","1");
         t.textContent = "Really wipe? Click again";
@@ -3795,6 +4301,105 @@ function selfCheck(){
           problems.push("question "+QUESTIONS[i].id+" → unknown concept "+QUESTIONS[i].conceptIds[j]);
       }
     }
+  }
+  /* ---- The quiz bank -------------------------------------------------------
+     Every check here exists because the failure it catches is invisible from
+     the outside: a quiz with a mis-indexed answer, a `whyNot` list one entry
+     short, or an option that cannot survive being shuffled all render as a
+     perfectly ordinary question and mark you wrong for being right. */
+  if (QUIZ.length){
+    var zIds = {}, perConcept = {}, ansPos = {};
+    for (i=0;i<QUIZ.length;i++){
+      var z = QUIZ[i], where = "quiz item "+(z.id || "#"+i);
+      if (!z.id) problems.push(where+" has no id");
+      else if (zIds[z.id]) problems.push("duplicate quiz id: "+z.id);
+      zIds[z.id] = 1;
+      if (!ids[z.conceptId]) problems.push(where+" → unknown concept "+z.conceptId);
+      else perConcept[z.conceptId] = (perConcept[z.conceptId]||0) + 1;
+      if (!z.stem) problems.push(where+" has no stem");
+      var opts = z.options || [];
+      if (opts.length < 3) problems.push(where+" has "+opts.length+" options — a quiz item needs at least 3");
+      if (typeof z.answer !== "number" || z.answer < 0 || z.answer >= opts.length)
+        problems.push(where+" answer index "+z.answer+" is outside its "+opts.length+" options");
+      /* One note per wrong option, in the authored order. Anything else and
+         whyNotFor hands out the explanation for a different option. */
+      if (!z.whyNot || z.whyNot.length !== Math.max(0, opts.length - 1))
+        problems.push(where+" has "+((z.whyNot&&z.whyNot.length)||0)+" whyNot notes for "+
+          opts.length+" options — it needs exactly "+(opts.length-1));
+      if (!z.why) problems.push(where+" has no `why` for the correct answer");
+      var seenOpt = {};
+      for (j=0;j<opts.length;j++){
+        var ot = String(opts[j]);
+        if (seenOpt[ot]) problems.push(where+" repeats an option verbatim");
+        seenOpt[ot] = 1;
+        /* Options are shuffled on every attempt, so anything that refers to a
+           position — "both A and C", "none of the above" — is a wrong answer
+           waiting to happen for reasons the reader cannot see. */
+        if (/\b(of the above|of these options|both a and|neither a nor)\b/i.test(ot))
+          problems.push(where+" option "+j+" refers to the other options by position, which the shuffle breaks");
+      }
+      if (typeof z.answer === "number") ansPos[z.answer] = (ansPos[z.answer]||0) + 1;
+    }
+    /* Coverage, and the shape of the key. A bank whose answer sits in the same
+       authored slot every time is a bank somebody wrote on autopilot; the
+       shuffle hides it from the reader but not from the next author. */
+    /* Reported as two lines rather than as one line per concept: while a bank is
+       being written this check IS the to-do list, and eighty-eight identical
+       problems would bury every other thing selfCheck has to say. */
+    var noQuiz = [], thin = [];
+    for (i=0;i<CONCEPTS.length;i++){
+      var qn2 = perConcept[CONCEPTS[i].id] || 0;
+      if (!qn2) noQuiz.push(CONCEPTS[i].id);
+      else if (qn2 < 3) thin.push(CONCEPTS[i].id+" ("+qn2+")");
+    }
+    if (noQuiz.length)
+      problems.push(noQuiz.length+" concept(s) have no quiz items — every concept ends in a quiz: "+
+        noQuiz.slice(0,12).join(", ")+(noQuiz.length>12 ? ", … and "+(noQuiz.length-12)+" more" : ""));
+    if (thin.length)
+      problems.push(thin.length+" concept(s) have fewer than 3 quiz items — a graded verdict needs "+
+        "at least 3: "+thin.slice(0,12).join(", ")+(thin.length>12 ? ", …" : ""));
+    var slots = 0, most = 0;
+    for (var ap in ansPos) if (Object.prototype.hasOwnProperty.call(ansPos, ap)){
+      slots++; most = Math.max(most, ansPos[ap]);
+    }
+    if (slots && most > QUIZ.length * 0.45)
+      problems.push("quiz answer key is lopsided: "+most+" of "+QUIZ.length+
+        " answers sit in the same authored slot");
+    /* ---- The length cue ------------------------------------------------
+       The one bias an author cannot see from inside a single item. Writing
+       the correct option as a full explanation and the wrong ones as bare
+       claims makes the longest option correct far more often than chance,
+       and a test-wise student will find that pattern long before they find
+       the physics. Shuffling the options does not help — it moves position,
+       not length.
+
+       The fix is not to pad the distractors, which produces waffle. It is to
+       state the claim in the option and put the reasoning in `why`, which is
+       where a reader wants it anyway. 45% is the line: with four options,
+       chance is 25%, and a bank that never quite settles below 45% is a bank
+       whose author was explaining in the wrong field. */
+    /* Prose items only, and only where the winning margin is big enough to
+       see. An item whose options are "8", "16" and "4" has a longest option
+       too, and it carries no information whatever — counting those would
+       measure arithmetic rather than the writing habit this is looking for.
+       A tenth of the longest option is about the point at which a difference
+       becomes visible at a glance without counting words. */
+    var longest = 0, prose = 0;
+    for (i=0;i<QUIZ.length;i++){
+      var zo = QUIZ[i].options || [], best = -1, bi = -1, second = -1;
+      for (j=0;j<zo.length;j++){
+        var len = String(zo[j]).length;
+        if (len > best){ second = best; best = len; bi = j; }
+        else if (len > second) second = len;
+      }
+      if (best < 30) continue;                 /* not prose: length says nothing */
+      prose++;
+      if (bi === QUIZ[i].answer && best > second * 1.1) longest++;
+    }
+    if (prose >= 20 && longest > prose * 0.45)
+      problems.push("the correct option is visibly the longest in "+longest+" of "+prose+
+        " prose quiz items ("+Math.round(100*longest/prose)+"%) — that is a giveaway; move the "+
+        "reasoning out of the option and into `why`");
   }
   for (i=0;i<SURFACES.length;i++){
     var found = false;
@@ -4281,7 +4886,8 @@ window.__learn = {
   grade:grade, cardState:cardState, cardScore:cardScore, isDue:isDue, isNew:isNew,
   numMatches:numMatches, autoTol:autoTol,
   conceptMastery:conceptMastery, weakest:weakest, dueCount:dueCount, redQuestions:redQuestions,
-  buildDeck:buildDeck, pickQuestions:pickQuestions
+  buildDeck:buildDeck, pickQuestions:pickQuestions,
+  QUIZ:QUIZ, quizFor:quizFor, quizScore:quizScore, quizOwed:quizOwed, whyNotFor:whyNotFor
 };
 var probs = selfCheck();
 if (probs.length) console.warn("[learning-centre] content problems:\n" + probs.join("\n"));
@@ -4304,6 +4910,8 @@ return {
   cardsFor:cardsFor, questionsFor:questionsFor, dueCount:dueCount, redQuestions:redQuestions,
   conceptMastery:conceptMastery, masteryClass:masteryClass, masteryWord:masteryWord,
   conceptTile:conceptTile, conceptPill:conceptPill, conceptStats:conceptStats,
+  quizFor:quizFor, quizScore:quizScore, quizTaken:quizTaken, quizVerdict:quizVerdict,
+  whyNotFor:whyNotFor,
   workedBlock:workedBlock, passageBlock:passageBlock,
   resumeCta:resumeCta, flagBtn:flagBtn, weakest:weakest,
   numMatches:numMatches, autoTol:autoTol, numify:numify

@@ -155,6 +155,7 @@ button.level.pick.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
      reference, the essay prompts and the drills. Generated; see the note at the
      top of this file. -->
 <script src="content.js"></script>
+<script src="quiz.js"></script>
 
 <script>
 "use strict";
@@ -298,7 +299,8 @@ var CENTRE = {
     {id:"learn",    label:"Concepts",           ico:"book"},
     {id:"rubrics",  label:"Rubrics",            ico:"target"},
     {id:"devices",  label:"Rhetorical devices", ico:"layers"},
-    {id:"cards",    label:"Flashcards",         ico:"cards",  section:"Drill"},
+    {id:"quiz",     label:"Quizzes",            ico:"check",  section:"Test"},
+    {id:"cards",    label:"Flashcards",         ico:"cards",  section:"Review when due"},
     {id:"recall",   label:"Blank page",         ico:"file"},
     {id:"practice", label:"Flip through",       ico:"book"},
     {id:"mock",     label:"Explain it",         ico:"ask"},
@@ -377,6 +379,12 @@ var CENTRE = {
     "reading. No passage here is a real exam passage and no prompt is a real exam prompt — they " +
     "are original, and labelled. Where a real released question would be better practice, it is " +
     "cited rather than reproduced. <strong>AP</strong> is a trademark of the College Board.",
+
+  /* The graded end of every lesson, and — because `drivesMastery` is on — what
+     the status word is computed from. See the quiz section of
+     ../shared/centre.js for why a marked quiz, rather than a self-graded
+     flashcard streak, is what a concept's verdict hangs on. */
+  quiz: {items: QUIZ, drivesMastery: true},
 
   concepts:  CONCEPTS,
   cards:     CARDS,

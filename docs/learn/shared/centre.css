@@ -916,3 +916,98 @@ details.notes[open] > summary::after{transform:rotate(90deg)}
 .srcrow code{background:none;padding:0;color:var(--ink-soft)}
 
 .empty{color:var(--ink-faint);font-size:13px;padding:18px 0}
+
+/* ---- The quiz ---------------------------------------------------------------
+   Two states of one list. Unmarked, an option is a button and the only signal
+   on the page is which one you have picked; marked, the same list is read-only
+   and carries the verdict. Nothing about correctness is drawn before grading —
+   not a tick, not a colour — because the whole value of the instrument is that
+   you commit first.
+
+   Options are set as a stack rather than a grid at every width. A four-option
+   grid looks tidier and is worse: the answers here are sentences, they wrap to
+   different depths, and a two-by-two of ragged blocks makes the reader compare
+   shapes instead of claims. */
+.quizcta{max-width:46rem;margin:0 0 6px}
+.qz-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.qz-score{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.qz-score .faint{font-size:15px;font-weight:600}
+
+.qz-prog{display:flex;align-items:center;gap:12px;margin:20px 0 6px;max-width:46rem}
+.qz-prog .bar{flex:1}
+.qz-prog .bar > i{background:var(--accent)}
+
+.qzlist{list-style:none;counter-reset:qz;padding:0;margin:18px 0 0;max-width:46rem}
+.qzlist > li.qz{
+  counter-increment:qz;position:relative;
+  border:1px solid var(--card-line);border-radius:var(--radius);background:#fff;
+  padding:16px 20px 14px 54px;margin:0 0 14px;box-shadow:var(--card-shadow);
+}
+.qzlist > li.qz::before{
+  content:counter(qz);position:absolute;left:18px;top:16px;
+  width:22px;height:22px;border-radius:999px;background:var(--pill-grey-bg);
+  color:var(--ink-soft);font-size:12px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums;
+}
+.qzlist.marked > li.qz.ok::before{background:var(--pill-green-bg);color:var(--pill-green-ink)}
+.qzlist.marked > li.qz.bad::before{background:var(--pill-red-bg);color:var(--pill-red-ink)}
+.qz-stem{font-size:15.5px;line-height:1.6;font-weight:500;margin-bottom:12px}
+.qz-opts{display:flex;flex-direction:column;gap:8px}
+
+.qz-opt{
+  display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;
+  border:1px solid var(--line-strong);border-radius:6px;background:#fff;
+  padding:10px 12px;font:inherit;font-size:14px;line-height:1.55;color:inherit;
+  cursor:pointer;transition:background .12s,border-color .12s;
+}
+.qz-opt:hover{background:var(--hover)}
+.qz-opt.picked{border-color:var(--accent);background:var(--accent-wash);font-weight:500}
+.qz-let{
+  flex:0 0 auto;width:20px;height:20px;border-radius:4px;background:var(--pill-grey-bg);
+  color:var(--ink-soft);font-size:11px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;margin-top:1px;
+}
+.qz-opt.picked .qz-let{background:var(--accent);color:#fff}
+.qz-txt{flex:1;min-width:0}
+/* Marked: no hover, no pointer — it is a record, not a control. */
+.qz-opt.done{cursor:default;background:#fff}
+.qz-opt.done:hover{background:#fff}
+.qz-opt.done.right{border-color:var(--pill-green-dot);background:var(--pill-green-bg)}
+.qz-opt.done.right .qz-let{background:var(--pill-green-dot);color:#fff}
+.qz-opt.done.wrong{border-color:var(--pill-red-dot);background:var(--pill-red-bg)}
+.qz-opt.done.wrong .qz-let{background:var(--pill-red-dot);color:#fff}
+.qz-tag{
+  flex:0 0 auto;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-soft);align-self:center;
+}
+.qz-opt.done.right .qz-tag{color:var(--pill-green-ink)}
+.qz-opt.done.wrong .qz-tag{color:var(--pill-red-ink)}
+
+.qz-why,.qz-whynot{font-size:13.5px;line-height:1.65;margin-top:12px;padding-left:12px;border-left:2px solid var(--line-strong)}
+.qz-whynot{border-left-color:var(--pill-red-dot)}
+.qz-src{font-size:11.5px;margin-top:10px}
+.qz-submit{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:20px 0 0;
+  padding-top:16px;border-top:1px solid var(--line);max-width:46rem;
+}
+.qz-submit .btn[disabled]{opacity:.5;cursor:not-allowed}
+
+/* The verdict. One word, large, in the band's colour — this is the answer to
+   the question the whole lesson was building to, and it should be legible from
+   across the room rather than set as another pill in a row of pills. */
+.qz-verdict{
+  border-radius:var(--radius);padding:18px 22px;margin:18px 0 18px;max-width:46rem;
+  display:grid;grid-template-columns:1fr auto;gap:4px 18px;align-items:baseline;
+}
+.qz-verdict.p-green{background:var(--pill-green-bg);color:var(--pill-green-ink)}
+.qz-verdict.p-yellow{background:var(--pill-yellow-bg);color:var(--pill-yellow-ink)}
+.qz-verdict.p-red{background:var(--pill-red-bg);color:var(--pill-red-ink)}
+.qv-word{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.qv-score{font-size:26px;font-weight:700;letter-spacing:-.01em;text-align:right}
+.qv-score .faint{font-size:17px;font-weight:600;opacity:.65;color:inherit}
+.qv-line{grid-column:1/-1;font-size:13.5px;line-height:1.65;margin-top:8px;opacity:.9}
+@media(max-width:640px){
+  .qzlist > li.qz{padding:14px 14px 12px 44px}
+  .qzlist > li.qz::before{left:12px}
+  .qv-word{font-size:28px}
+}

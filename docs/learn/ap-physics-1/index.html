@@ -141,6 +141,7 @@
      exam structure and the question banks. Generated; see the note at the top
      of this file. -->
 <script src="content.js"></script>
+<script src="quiz.js"></script>
 
 <script>
 "use strict";
@@ -321,7 +322,8 @@ var CENTRE = {
     {id:"map",      label:"Dependency map",  ico:"layers"},
     {id:"units",    label:"Units",           ico:"hash"},
     {id:"formula",  label:"Formula sheet",   ico:"file"},
-    {id:"cards",    label:"Flashcards",      ico:"cards",  section:"Drill"},
+    {id:"quiz",     label:"Quizzes",         ico:"check",  section:"Test"},
+    {id:"cards",    label:"Flashcards",      ico:"cards",  section:"Review when due"},
     {id:"recall",   label:"Blank page",      ico:"file"},
     {id:"practice", label:"Flip through",    ico:"book"},
     {id:"mock",     label:"Explain it",      ico:"target"},
@@ -409,6 +411,12 @@ var CENTRE = {
     "The physics, the topic codes, the weightings and the equation sheet are grounded; the " +
     "commentary about the exam is not. " +
     "<strong>AP</strong> is a trademark of the College Board.",
+
+  /* The graded end of every lesson, and — because `drivesMastery` is on — the
+     thing the status word is computed from. See the long comment at the top of
+     the quiz section in shared/centre.js for why it, rather than the flashcard
+     streak, is what a concept's verdict hangs on. */
+  quiz: {items: QUIZ, drivesMastery: true},
 
   concepts:  CONCEPTS,
   cards:     CARDS,
