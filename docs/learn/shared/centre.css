@@ -1,0 +1,918 @@
+/* ===========================================================================
+   Learning Centre — shared stylesheet
+   Extracted verbatim from the single-file Surrey site so every centre reads as
+   one family. White mode only: there is deliberately no dark theme and no
+   toggle. Nothing here is centre-specific.
+   =========================================================================== */
+
+/* ===========================================================================
+   TOKENS
+   Taken from the scheduler reference so the three pages read as one family.
+   White mode only — there is deliberately no dark theme and no toggle.
+   =========================================================================== */
+:root{
+  color-scheme: light;
+
+  --bg:#ffffff;
+  --ink:#37352f;          /* Notion's near-black; never pure #000 */
+  --ink-soft:#787774;
+  --ink-faint:#9b9a97;
+  --placeholder:#b3b2af;
+
+  --rail:#f7f7f5;
+  --line:rgba(0,0,0,.08);
+  --line-strong:rgba(0,0,0,.14);
+  --hover:rgba(0,0,0,.06);
+
+  --accent:#2383e2;
+  --accent-hover:#1a6dc0;
+  --accent-wash:rgba(35,131,226,.10);
+
+  --card-line:rgba(15,15,15,.10);
+  --card-shadow:0 1px 2px rgba(15,15,15,.05);
+  --card-shadow-hover:0 2px 6px rgba(15,15,15,.12);
+  --radius:8px;
+
+  /* Notion pill pairs. Mastery maps onto three of these: green / yellow / red.
+     Kept muted so a wall of status colour never out-shouts the accent. */
+  --pill-green-bg:#dbeddb;   --pill-green-ink:#1c3829;   --pill-green-dot:#4f9d78;
+  --pill-yellow-bg:#fdecc8;  --pill-yellow-ink:#402c1b;  --pill-yellow-dot:#cb912f;
+  --pill-red-bg:#ffe2dd;     --pill-red-ink:#5d1715;     --pill-red-dot:#e03e3e;
+  --pill-blue-bg:#d3e5ef;    --pill-blue-ink:#183347;    --pill-blue-dot:#529cca;
+  --pill-purple-bg:#e8deee;  --pill-purple-ink:#412454;  --pill-purple-dot:#9065b0;
+  --pill-orange-bg:#fadec9;  --pill-orange-ink:#49290e;  --pill-orange-dot:#d9730d;
+  --pill-grey-bg:#e3e2e0;    --pill-grey-ink:#37352f;    --pill-grey-dot:#91918e;
+  --pill-pink-bg:#f5e0e9;    --pill-pink-ink:#4c2337;    --pill-pink-dot:#c14c8a;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:rgba(35,131,226,.22)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+
+/* Notion's slim scrollbars. Applied to every scroll container. */
+.nsb::-webkit-scrollbar{height:12px;width:12px}
+.nsb::-webkit-scrollbar-track{background:transparent}
+.nsb::-webkit-scrollbar-thumb{
+  background:rgba(55,53,47,.18);border-radius:999px;
+  border:3px solid transparent;background-clip:content-box;
+}
+.nsb::-webkit-scrollbar-thumb:hover{background:rgba(55,53,47,.32);background-clip:content-box}
+
+@keyframes pop-in{from{opacity:0;transform:translateY(4px) scale(.985)}to{opacity:1;transform:none}}
+.pop{animation:pop-in .16s cubic-bezier(.2,.8,.2,1)}
+
+/* ===========================================================================
+   LAYOUT
+   =========================================================================== */
+.app{display:flex;height:100vh;overflow:hidden}
+
+.rail{
+  width:260px;flex:0 0 260px;background:var(--rail);
+  border-right:1px solid var(--line);display:flex;flex-direction:column;
+  transition:transform .2s;
+}
+.rail-head{display:flex;align-items:center;gap:8px;padding:12px 12px 8px}
+.mark{
+  width:24px;height:24px;border-radius:6px;background:var(--ink);
+  display:grid;place-items:center;color:#fff;font-size:13px;flex:0 0 auto;
+}
+.rail-title{font-size:15px;font-weight:600;letter-spacing:-.01em;flex:1;min-width:0}
+.rail-scroll{flex:1;overflow-y:auto;padding:0 8px 12px}
+.rail-foot{padding:8px;border-top:1px solid var(--line)}
+
+.sect-label{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-faint);padding:0 6px;margin:14px 0 6px;
+}
+.navrow{
+  display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+  padding:4px 8px;border-radius:6px;color:var(--ink);font-size:14px;
+  transition:background .12s;
+}
+.navrow:hover{background:var(--hover)}
+.navrow.on{background:var(--hover);font-weight:500}
+.navrow .ico{color:var(--ink-soft);flex:0 0 auto}
+/* An icon span is inline by default, so its SVG sits on the text baseline and
+   every glyph lands at a slightly different height. Centring in a fixed box
+   makes alignment a property of the container rather than of each path. */
+[data-ico]{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:16px;height:16px;flex:0 0 auto;vertical-align:middle;
+}
+[data-ico] svg{display:block}
+.navrow .count{
+  margin-left:auto;font-size:12px;color:var(--ink-faint);
+  font-variant-numeric:tabular-nums;
+}
+.navrow .count.hot{
+  background:var(--pill-red-bg);color:var(--pill-red-ink);
+  padding:0 6px;border-radius:999px;font-weight:600;
+}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{
+  height:44px;flex:0 0 44px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+}
+.crumb{display:flex;align-items:center;gap:6px;color:var(--ink-soft);font-size:14px;min-width:0}
+.crumb b{color:var(--ink);font-weight:500}
+.spacer{flex:1}
+.hamb{display:none;width:28px;height:28px;border-radius:6px;place-items:center;color:var(--ink-soft)}
+.hamb:hover{background:var(--hover)}
+.scroll{flex:1;overflow-y:auto}
+.page{padding:32px 40px 80px;max-width:1180px}
+.page.narrow{max-width:920px}
+/* The pipeline page carries a diagram and a side panel side by side, so it is
+   allowed past the 1180 the prose pages are held to. */
+.page.wide{max-width:1320px}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:30;display:none}
+
+@media(max-width:900px){
+  .rail{position:fixed;inset:0 auto 0 0;z-index:40;transform:translateX(-100%)}
+  body.rail-open .rail{transform:none}
+  body.rail-open .backdrop{display:block}
+  .hamb{display:grid}
+  .page{padding:24px 20px 80px}
+}
+
+/* ===========================================================================
+   TYPE
+   =========================================================================== */
+.title{display:flex;align-items:center;gap:12px;margin:0 0 8px}
+.title .emo{font-size:40px;line-height:1}
+.title h1{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0}
+.lede{color:var(--ink-soft);font-size:15px;max-width:42rem;margin:0 0 4px;line-height:1.6}
+h2.sec{font-size:19px;font-weight:600;letter-spacing:-.01em;margin:34px 0 10px}
+h3.sub{font-size:15px;font-weight:600;margin:22px 0 6px}
+.eyebrow{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-faint);
+}
+.muted{color:var(--ink-soft)}
+.faint{color:var(--ink-faint)}
+.num{font-variant-numeric:tabular-nums}
+code,.mono{
+  font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  font-size:.92em;
+}
+code{background:var(--pill-grey-bg);padding:1px 5px;border-radius:4px}
+
+/* Math. A small LaTeX subset rendered with spans — see texToHtml(). KaTeX would
+   be better typography and ~300 KB of JS plus font files, which would end this
+   file's one hard rule: it opens from file:// with no network. */
+.math{font-family:Georgia,"Times New Roman",serif;font-size:1.04em;white-space:nowrap}
+.math i{font-style:italic;padding-right:.03em}
+.math .up{font-style:normal;font-family:inherit;white-space:pre-wrap}
+.math .up i{font-style:normal}
+.math .up.bf{font-weight:700}
+.math sup,.math sub{font-size:.72em;line-height:0}
+.math sup{vertical-align:.52em}
+.math sub{vertical-align:-.28em}
+.math .frac{display:inline-flex;flex-direction:column;vertical-align:middle;
+  text-align:center;margin:0 .18em}
+.math .frac > span{padding:0 .3em;line-height:1.24}
+.math .frac > span:first-child{border-bottom:1px solid currentColor}
+.math .acc{position:relative;display:inline-block}
+/* NOT .mark — that is the sidebar badge (white on dark), and an accent using
+   it inherited color:#fff and rendered white-on-white. */
+.math .acc > .amark{position:absolute;left:0;right:0;top:-.46em;text-align:center;
+  font-size:.8em;line-height:1;font-style:normal}
+.math .sqrt > span{border-top:1px solid currentColor;padding:0 .15em;margin-left:.05em}
+.math-block{display:block;text-align:center;margin:12px 0;font-size:1.12em;white-space:normal}
+
+/* tab strip under the page title */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 0}
+.tab{
+  display:flex;align-items:center;gap:6px;padding:6px 8px;font-size:14px;
+  color:var(--ink-faint);border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.tab:hover{color:var(--ink-soft)}
+.tab.on{color:var(--ink);font-weight:500;border-bottom-color:var(--ink)}
+/* A tab that is a link still needs to stop looking like body copy on hover. */
+a.tab:hover{text-decoration:none}
+
+/* Concept page: reading column plus a gutter for the analogy. */
+.lesson-wrap{display:flex;align-items:flex-start}
+.lesson-side{
+  flex:0 0 316px;min-width:0;position:sticky;top:0;
+  padding:96px 40px 40px 0;
+}
+.analogy{
+  background:var(--pill-yellow-bg);border:1px solid rgba(203,145,47,.22);
+  border-radius:10px;padding:16px 18px;
+}
+.analogy-h{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--pill-yellow-ink);opacity:.72;margin-bottom:8px;
+}
+.analogy p{margin:0 0 .7em;font-size:14px;line-height:1.62;color:var(--pill-yellow-ink)}
+.analogy p:last-child{margin-bottom:0}
+/* Below the breakpoint the gutter disappears, so the analogy rejoins the flow
+   rather than being squeezed into a column too narrow to read. */
+@media(max-width:1180px){
+  .lesson-wrap{display:block}
+  .lesson-side{position:static;flex:none;padding:0 40px 36px;max-width:44rem}
+}
+@media(max-width:900px){ .lesson-side{padding:0 20px 28px} }
+
+/* Concept picker — a modal, so the page stays about the card. */
+.modal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:20px}
+body.pick-open .modal{display:flex}
+.modal-bg{position:absolute;inset:0;background:rgba(15,15,15,.34)}
+.modalbox{
+  position:relative;background:#fff;border-radius:10px;width:min(760px,100%);
+  max-height:min(82vh,760px);display:flex;flex-direction:column;
+  box-shadow:0 10px 44px rgba(15,15,15,.26);
+}
+.modalhead{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.modalbody{overflow-y:auto;padding:4px 18px 12px;flex:1}
+.modalfoot{display:flex;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+.ckgroup{padding:12px 0;border-bottom:1px solid var(--line)}
+.ckgroup:last-child{border-bottom:none}
+.ckhead{margin-bottom:6px}
+.ckgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px}
+@media(max-width:640px){.ckgrid{grid-template-columns:1fr}}
+.ckrow{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:5px 8px;border-radius:6px;font-size:13.5px;color:var(--ink);
+}
+.ckrow:hover{background:var(--hover)}
+.ckbox{
+  flex:0 0 auto;width:16px;height:16px;border-radius:4px;background:#fff;
+  border:1.5px solid var(--line-strong);display:grid;place-items:center;color:transparent;
+  transition:background .1s,border-color .1s;
+}
+.ckrow.on .ckbox{background:var(--accent);border-color:var(--accent);color:#fff}
+.cklabel{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The free-recall checklist reuses the picker row but needs two lines: the
+   point, and what a full answer to it contains. The picker's single-line
+   ellipsis would hide precisely the half you are scoring yourself against. */
+.ckrow.rc{align-items:flex-start;padding:8px;gap:10px;border-bottom:1px solid var(--line)}
+.ckrow.rc:last-child{border-bottom:none}
+.ckrow.rc .ckbox{margin-top:2px}
+.ckrow.rc .cklabel{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.5}
+.ckrow.rc .ckq{display:block;font-weight:500}
+.ckrow.rc .cka{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.ckrow.rc.on{background:var(--pill-green-bg)}
+.ckrow.rc.on .ckq{color:var(--pill-green-ink)}
+details.myrecall{margin:14px 0 22px;font-size:13px}
+details.myrecall summary{cursor:pointer;color:var(--ink-soft);font-size:12px}
+/* Flagged rows in the picker. The tint has to survive .ckrow:hover and the
+   selected state, or the cue disappears exactly when you are interacting. */
+.ckrow.fl,.ckrow.fl:hover{background:var(--pill-orange-bg)}
+.ckrow.fl .cklabel{font-weight:500}
+.ckflag{flex:0 0 auto;font-size:11px;color:var(--pill-orange-ink);line-height:1}
+.ckn{font-size:11px;color:var(--ink-faint);font-variant-numeric:tabular-nums;flex:0 0 auto}
+/* Attempted-or-not, as a dot. Hollow for never-seen so "nothing here yet" reads
+   as absence rather than as another colour competing with the filled states. */
+.sdot{
+  flex:0 0 auto;width:8px;height:8px;border-radius:50%;display:inline-block;
+  background:var(--pill-grey-dot);
+}
+.sdot.s-new{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line-strong)}
+.sdot.s-learning{background:var(--pill-yellow-dot)}
+.sdot.s-due{background:var(--pill-blue-dot)}
+.sdot.s-solid{background:var(--pill-green-dot)}
+.ckleg{
+  display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-faint);
+  flex-wrap:wrap;
+}
+.ckleg .sdot{margin-left:6px}
+.ckleg .sdot:first-child{margin-left:0}
+@media(max-width:640px){.ckleg{display:none}}
+
+/* Flip-through cards. Both faces occupy the same grid cell so the card sizes to
+   the taller of the two — an absolutely-positioned flip cannot auto-height, and
+   these answers vary from six words to a paragraph. */
+.flipwrap{max-width:50rem}
+.flipmeta{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.flipcard{display:grid;perspective:1600px;cursor:pointer;min-height:300px}
+.flipface{
+  grid-area:1/1;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  transition:transform .42s cubic-bezier(.4,.15,.2,1);
+  background:#fff;border:1px solid var(--card-line);border-radius:12px;
+  box-shadow:0 1px 3px rgba(15,15,15,.06),0 8px 28px rgba(15,15,15,.06);
+  padding:26px 34px 22px;display:flex;flex-direction:column;
+}
+.flipface.back{transform:rotateY(180deg)}
+.flipcard.flipped .flipface.front{transform:rotateY(-180deg)}
+.flipcard.flipped .flipface.back{transform:rotateY(0)}
+.fkind{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-faint);flex:0 0 auto;
+}
+/* The prompt is the point of the card, so it gets the optical centre rather than
+   being pinned under the label with dead space beneath it. */
+.ftext{
+  flex:1;display:flex;flex-direction:column;justify-content:center;
+  font-size:23px;line-height:1.42;letter-spacing:-.011em;
+  padding:18px 0;max-width:34em;
+}
+.flipface.back .ftext{font-size:20px;line-height:1.5}
+.ftext p{margin:0 0 .6em}
+.ftext p:last-child{margin-bottom:0}
+.ftext code{font-size:.88em;background:var(--rail);padding:2px 6px;border-radius:4px}
+.fmeans{
+  flex:0 0 auto;margin-top:4px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:14.5px;line-height:1.62;color:var(--ink-soft);max-width:44em;
+}
+.fmeans p{margin:0 0 .5em}
+.fmeans p:last-child{margin-bottom:0}
+.fhint{flex:0 0 auto;font-size:12px;color:var(--placeholder);letter-spacing:.02em}
+/* Ask-the-tutor, on the answer face only. Asking before you have seen the answer
+   is asking to be told, which is the opposite of retrieval practice. */
+.fask{flex:0 0 auto;margin-top:14px;display:flex;justify-content:flex-end}
+.fask .btn{color:var(--ink-soft)}
+.fask .btn:hover{color:var(--ink);border-color:var(--line-strong)}
+/* One tick per card in a tracked pass — where you are, and what you have called
+   so far. Cheaper to read at a glance than a pair of counters alone. */
+.trackstrip{display:flex;gap:2px;margin-bottom:12px;flex-wrap:wrap}
+.trackstrip i{
+  flex:1 1 4px;min-width:3px;height:4px;border-radius:2px;
+  background:var(--line-strong);opacity:.45;transition:background .12s,opacity .12s;
+}
+.trackstrip i.known{background:var(--pill-green-dot);opacity:1}
+.trackstrip i.unknown{background:var(--pill-red-dot);opacity:1}
+.trackstrip i.now{opacity:1;background:var(--accent);height:6px;margin-top:-1px}
+.flipcard:hover .fhint{color:var(--ink-faint)}
+
+/* Full screen — nothing on the display but the card. */
+body.fs .rail,
+body.fs .topbar,
+body.fs .fs-hide{display:none}
+body.fs .scroll{background:var(--rail)}
+body.fs .page{
+  max-width:none;padding:0;min-height:100vh;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+}
+body.fs .flipwrap{width:min(78rem,94vw);max-width:none;margin:0 auto}
+body.fs .flipwrap .btnrow{justify-content:center}
+body.fs .flipwrap > p{text-align:center}
+body.fs .flipcard{min-height:min(62vh,620px)}
+body.fs .ftext{font-size:34px;line-height:1.34;max-width:26em}
+body.fs .flipface.back .ftext{font-size:27px;line-height:1.42}
+body.fs .fmeans{font-size:17px}
+body.fs .flipface{padding:34px 46px 28px;border-radius:16px}
+@media(max-width:900px){
+  .ftext{font-size:19px}
+  .flipface.back .ftext{font-size:17px}
+  .flipface{padding:20px 22px 18px}
+  body.fs .ftext{font-size:23px}
+  body.fs .flipface.back .ftext{font-size:19px}
+  body.fs .flipface{padding:22px 24px}
+}
+
+/* Ordered "learn next" list on the dependency map. */
+.nextlist{list-style:none;margin:0;padding:0;counter-reset:none}
+.nextlist li{margin-bottom:6px}
+.nextlist a{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:9px 12px;border:1px solid var(--card-line);border-radius:var(--radius);
+  background:#fff;box-shadow:var(--card-shadow);color:var(--ink);
+  transition:box-shadow .12s,border-color .12s;
+}
+.nextlist a:hover{box-shadow:var(--card-shadow-hover);border-color:var(--line-strong)}
+.nrank{
+  flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;
+  display:grid;place-items:center;font-size:12px;font-weight:600;
+  font-variant-numeric:tabular-nums;
+}
+.ntitle{flex:1;min-width:0;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nunlock{flex:0 0 auto;font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+@media(max-width:900px){ .nextlist .pill{display:none} }
+
+/* ===========================================================================
+   PROCESS TIMELINE
+   A dated rail down the left with the entry cards hanging off it. The rail is a
+   pseudo-element on the list rather than a border on each row, so a row can be
+   any height and the line stays continuous through the gaps.
+   =========================================================================== */
+.tl{position:relative;margin:0;padding:0 0 0 132px}
+/* The rail starts at the first dot rather than at the top of the list, so it
+   reads as connecting the entries instead of running past the first one. */
+.tl::before{
+  content:"";position:absolute;left:96px;top:25px;bottom:12px;width:1px;
+  background:var(--line-strong);
+}
+.tlrow{position:relative;margin:0 0 12px}
+/* Both the date and the dot are centred on the kind pill, not on the card:
+   card border 1 + padding 14 + half a 20px pill = 25px from the row's top.
+   The date column stops at 72px so its ring of a dot is not crowding the text. */
+.tldate{
+  position:absolute;left:-132px;top:17px;width:72px;text-align:right;
+  font-size:12px;line-height:1.35;color:var(--ink-faint);font-variant-numeric:tabular-nums;
+}
+.tldate b{display:block;color:var(--ink-soft);font-weight:600}
+.tldot{
+  position:absolute;left:-40px;top:20.5px;width:9px;height:9px;border-radius:50%;
+  background:var(--pill-grey-dot);box-shadow:0 0 0 3px var(--bg);
+}
+/* Key moments get a ring instead of extra colour — the pill already carries the
+   kind, and a second hue on the same dot would compete with it. */
+.tlrow.key .tldot{box-shadow:0 0 0 3px var(--bg),0 0 0 4.5px var(--ink)}
+.tlera{
+  position:relative;margin:34px 0 14px;padding:14px 16px;
+  background:var(--rail);border:1px solid var(--line);border-radius:var(--radius);
+}
+.tlera:first-child{margin-top:18px}
+.tlera h3{font-size:16px;font-weight:600;letter-spacing:-.01em;margin:0}
+.tlera .when{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.tlera p{margin:8px 0 0;font-size:13.5px;line-height:1.62;color:var(--ink-soft);max-width:46rem}
+.tlfield{margin-top:10px;font-size:13.5px;line-height:1.62}
+.tlfield .lbl{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-faint);margin-right:7px;
+}
+.tlev{list-style:none;margin:10px 0 0;padding:0;border-top:1px solid var(--line)}
+.tlev li{
+  display:flex;gap:10px;padding:5px 0 0;font-size:13px;line-height:1.55;
+  color:var(--ink-soft);
+}
+.tlev li::before{content:"";flex:0 0 auto;width:3px;border-radius:2px;background:var(--line-strong);margin:3px 0}
+.tlart{
+  display:inline-flex;align-items:center;font-size:11.5px;color:var(--ink-soft);
+  background:var(--rail);border:1px solid var(--line);border-radius:5px;
+  padding:1px 6px;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media(max-width:900px){
+  .tl{padding-left:0}
+  .tl::before,.tldot{display:none}
+  .tldate{position:static;width:auto;text-align:left;margin:0 0 5px}
+  .tldate b{display:inline}
+}
+
+/* ===========================================================================
+   TUTOR DRAWER
+   Present only when the page is served by serve.py from localhost. Opened from
+   file:// there is no button, no fetch, and no evidence any of this exists —
+   which is the state it must be in at a judging table with no wifi.
+   =========================================================================== */
+.tutor{
+  position:fixed;top:0;right:0;bottom:0;width:400px;max-width:100vw;
+  background:#fff;border-left:1px solid var(--line);z-index:50;
+  display:flex;flex-direction:column;transform:translateX(100%);
+  transition:transform .18s ease;box-shadow:-2px 0 12px rgba(15,15,15,.06);
+}
+body.tutor-open .tutor{transform:none}
+.tutor-head{
+  height:44px;flex:0 0 44px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:8px;padding:0 8px 0 14px;
+}
+.tutor-head b{font-size:14px;font-weight:600;flex:1}
+.tutor-ctx{
+  padding:8px 14px;border-bottom:1px solid var(--line);background:var(--rail);
+  font-size:12px;color:var(--ink-soft);
+}
+.tutor-log{flex:1;overflow-y:auto;padding:14px}
+.tutor-log:empty::after{
+  content:"Ask about anything on the page — a sentence that will not come apart, a number you cannot place, a choice you cannot justify yet.";
+  display:block;color:var(--placeholder);font-size:13px;line-height:1.55;
+}
+.turn{margin-bottom:14px;font-size:13.5px;line-height:1.6}
+.turn .who{
+  font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-faint);margin-bottom:3px;
+}
+.turn.me .bubble{background:var(--accent-wash);border-radius:6px;padding:7px 10px}
+.turn p{margin:0 0 7px}
+.turn p:last-child{margin-bottom:0}
+.turn code{background:var(--rail);padding:1px 4px;border-radius:3px;font-size:12.5px}
+/* Headings are deliberately close to body size. A drawer this narrow does not
+   have room for a display hierarchy, and the model reaches for ### freely. */
+.turn h3,.turn h4,.turn h5,.turn h6{
+  font-size:13.5px;font-weight:600;line-height:1.4;margin:12px 0 4px;
+  letter-spacing:-.005em;
+}
+.turn h3:first-child,.turn h4:first-child{margin-top:0}
+.turn ul,.turn ol{margin:0 0 7px;padding-left:20px}
+.turn li{margin-bottom:3px}
+.turn li:last-child{margin-bottom:0}
+.turn pre{
+  background:var(--rail);border:1px solid var(--line);border-radius:6px;
+  padding:8px 10px;margin:0 0 8px;overflow-x:auto;
+}
+.turn pre code{background:none;padding:0;font-size:12px;line-height:1.5}
+.turn em{font-style:italic}
+.turn strong{font-weight:600}
+.turn.err{color:var(--pill-red-ink);background:var(--pill-red-bg);padding:8px 10px;border-radius:6px}
+.tutor-ask{border-top:1px solid var(--line);padding:10px;display:flex;gap:8px;align-items:flex-end}
+.tutor-ask textarea{
+  flex:1;resize:none;border:1px solid var(--line-strong);border-radius:6px;
+  padding:7px 9px;font:inherit;font-size:13.5px;line-height:1.45;max-height:120px;
+  background:#fff;color:var(--ink);
+}
+.tutor-ask textarea:focus{outline:none;border-color:var(--accent)}
+.thinking{color:var(--ink-faint);font-size:13px;font-style:italic}
+@media(max-width:900px){ .tutor{width:100%} }
+
+/* Floating "Ask" above a text selection. Positioned in viewport coordinates
+   from the selection's own rect, so it tracks wrapped and multi-line ranges. */
+.asksel{
+  position:fixed;z-index:60;display:none;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:6px;font-size:12.5px;font-weight:500;
+  background:var(--ink);color:#fff;box-shadow:0 2px 8px rgba(15,15,15,.22);
+  transform:translate(-50%,-100%);white-space:nowrap;
+}
+.asksel:hover{background:#000}
+.asksel::after{                       /* little tail pointing at the text */
+  content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:4px solid transparent;border-top-color:var(--ink);
+}
+body.asksel-on .asksel{display:inline-flex}
+
+/* ===========================================================================
+   COMPONENTS
+   =========================================================================== */
+.card{
+  background:#fff;border:1px solid var(--card-line);box-shadow:var(--card-shadow);
+  border-radius:var(--radius);padding:14px;
+}
+.card.hoverable{transition:box-shadow .12s}
+.card.hoverable:hover{box-shadow:var(--card-shadow-hover)}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
+
+.pill{
+  display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;
+  padding:1px 7px;border-radius:4px;background:var(--pill-grey-bg);color:var(--pill-grey-ink);
+  white-space:nowrap;
+}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--pill-grey-dot);flex:0 0 auto}
+.p-green{background:var(--pill-green-bg);color:var(--pill-green-ink)}
+.p-green .dot{background:var(--pill-green-dot)}
+.p-yellow{background:var(--pill-yellow-bg);color:var(--pill-yellow-ink)}
+.p-yellow .dot{background:var(--pill-yellow-dot)}
+.p-red{background:var(--pill-red-bg);color:var(--pill-red-ink)}
+.p-red .dot{background:var(--pill-red-dot)}
+.p-blue{background:var(--pill-blue-bg);color:var(--pill-blue-ink)}
+.p-blue .dot{background:var(--pill-blue-dot)}
+.p-purple{background:var(--pill-purple-bg);color:var(--pill-purple-ink)}
+.p-purple .dot{background:var(--pill-purple-dot)}
+.p-orange{background:var(--pill-orange-bg);color:var(--pill-orange-ink)}
+.p-orange .dot{background:var(--pill-orange-dot)}
+.p-pink{background:var(--pill-pink-bg);color:var(--pill-pink-ink)}
+.p-pink .dot{background:var(--pill-pink-dot)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;
+  border:1px solid var(--line-strong);background:#fff;transition:background .12s;
+}
+.btn:hover{background:rgba(0,0,0,.03)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.ghost{border-color:transparent;color:var(--ink-soft)}
+.btn.ghost:hover{background:var(--hover);color:var(--ink)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.g{background:var(--pill-green-bg);border-color:var(--pill-green-dot);color:var(--pill-green-ink)}
+.btn.a{background:var(--pill-yellow-bg);border-color:var(--pill-yellow-dot);color:var(--pill-yellow-ink)}
+.btn.r{background:var(--pill-red-bg);border-color:var(--pill-red-dot);color:var(--pill-red-ink)}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.stat{padding:12px 14px}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600}
+.stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:2px}
+.stat .s{font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+/* Flags. Deliberately loud when set and quiet when not — an unflagged card
+   should not carry visual weight for a control you are not using. */
+.flagbtn{
+  display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;
+  padding:3px 8px;border-radius:6px;font-size:12px;line-height:1.4;
+  border:1px solid transparent;background:transparent;color:var(--ink-faint);
+  transition:background .12s,color .12s,border-color .12s;
+}
+.flagbtn .fi{font-size:13px;line-height:1}
+.flagbtn:hover{background:var(--hover);color:var(--ink-soft)}
+.flagbtn.on{
+  background:var(--pill-orange-bg);color:var(--pill-orange-ink);
+  border-color:var(--pill-orange-dot);font-weight:500;
+}
+.flagbtn.on:hover{background:var(--pill-orange-bg);color:var(--pill-orange-ink)}
+.card.flagged{border-color:var(--pill-orange-dot);box-shadow:inset 3px 0 0 var(--pill-orange-dot)}
+
+.bar{height:6px;border-radius:999px;background:var(--pill-grey-bg);overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:999px;background:var(--pill-green-dot)}
+
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th{
+  text-align:left;font-weight:600;color:var(--ink-soft);font-size:11px;
+  text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;
+  border-bottom:1px solid var(--line);
+}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t tr:last-child td{border-bottom:none}
+table.t td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tscroll{overflow-x:auto;border:1px solid var(--card-line);border-radius:var(--radius);background:#fff}
+
+.note{
+  border-left:3px solid var(--pill-yellow-dot);background:#fffdf7;
+  padding:10px 14px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.6;
+}
+.note.danger{border-left-color:var(--pill-red-dot);background:#fff8f7}
+.note.info{border-left-color:var(--accent);background:#f7fbff}
+
+.kbd{
+  display:inline-block;border:1px solid var(--line-strong);border-bottom-width:2px;
+  border-radius:4px;padding:0 5px;font-size:11px;color:var(--ink-soft);background:#fff;
+}
+
+input.txt,textarea.txt{
+  width:100%;border:1px solid var(--line-strong);border-radius:6px;
+  padding:8px 10px;background:#fff;outline:none;transition:border-color .12s;
+}
+input.txt:focus,textarea.txt:focus{border-color:var(--accent)}
+input.txt::placeholder,textarea.txt::placeholder{color:var(--placeholder)}
+textarea.txt{resize:vertical;min-height:90px;line-height:1.6}
+
+/* ===========================================================================
+   LESSON PROSE — reads like a Notion document, not like an app pane
+   =========================================================================== */
+.prose{max-width:46rem;font-size:16px;line-height:1.7;color:var(--ink)}
+.prose p{margin:0 0 14px}
+.prose ul,.prose ol{margin:0 0 14px;padding-left:22px}
+.prose li{margin:5px 0}
+.prose strong{font-weight:600}
+.prose h4{font-size:16px;font-weight:600;margin:26px 0 8px}
+.prose figure{margin:18px 0}
+.prose img{max-width:100%;border:1px solid var(--card-line);border-radius:var(--radius);display:block}
+.prose figcaption{font-size:12px;color:var(--ink-faint);margin-top:6px}
+.formula{
+  background:var(--rail);border:1px solid var(--line);border-radius:6px;
+  padding:12px 14px;margin:0 0 14px;font-family:ui-monospace,"SF Mono",Menlo,monospace;
+  font-size:14px;overflow-x:auto;
+}
+/* The pretest gate and the self-explanation box. Deliberately the most
+   prominent thing on the page when they appear — they are the part of the
+   lesson that does the work, and reading is the part that feels like it. */
+.gate{
+  border:1px solid var(--line-strong);border-radius:var(--radius);
+  background:#fff;padding:18px 20px;margin:18px 0 26px;max-width:46rem;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.gate.soft{background:var(--rail);box-shadow:none;margin:0 0 22px}
+.gate-q{font-size:17px;line-height:1.5;font-weight:500;margin:6px 0 10px}
+.gate-q code{font-size:.92em}
+.guessback{
+  border-left:3px solid var(--accent);background:#f7fbff;
+  padding:12px 16px;border-radius:0 6px 6px 0;margin:0 0 22px;max-width:46rem;
+}
+.gb-head{
+  display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:8px;
+}
+.gb-you{
+  margin:0;padding:0 0 0 12px;border-left:2px solid var(--line-strong);
+  font-size:14px;line-height:1.6;white-space:pre-wrap;
+}
+.gb-a{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;line-height:1.6}
+/* ---- Worked example --------------------------------------------------------
+   Numbered steps down the left, the justification for each one set quieter
+   underneath it. The answer and the independent check are boxed off at the
+   bottom so the eye can find "did I get the same thing" without re-reading the
+   derivation. */
+.worked{
+  border:1px solid var(--card-line);border-radius:var(--radius);background:#fff;
+  padding:16px 20px;margin:0 0 22px;max-width:46rem;
+}
+.worked .w-prompt{font-size:15px;line-height:1.65}
+.worked .w-prompt p:last-child,.worked .w-given p:last-child{margin-bottom:0}
+.worked .w-given{
+  margin:10px 0 0;padding:8px 12px;background:var(--rail);border-radius:6px;
+  font-size:13.5px;line-height:1.6;color:var(--ink-soft);
+}
+.w-steps{margin:16px 0 0;padding-left:22px}
+.w-steps li{margin:0 0 14px}
+.w-steps li::marker{color:var(--ink-faint);font-variant-numeric:tabular-nums}
+.w-do{font-size:14.5px;line-height:1.65}
+.w-do p{margin:0 0 6px}
+.w-why{
+  font-size:13px;line-height:1.6;color:var(--ink-soft);
+  border-left:2px solid var(--line);padding-left:10px;margin-top:4px;
+}
+.w-why p{margin:0 0 6px}
+.w-why p:last-child{margin-bottom:0}
+.w-ans{
+  margin:16px 0 0;padding:10px 14px;border-radius:6px;
+  background:var(--rail);font-size:14.5px;line-height:1.6;
+}
+.w-check{
+  margin:8px 0 0;padding:10px 14px;border-left:3px solid var(--pill-green-dot);
+  background:#f6fbf7;border-radius:0 6px 6px 0;font-size:13px;line-height:1.6;
+}
+
+/* ---- A passage, worked ----------------------------------------------------- */
+.passage{max-width:46rem;margin:0 0 22px}
+.pg-text{
+  margin:0;padding:14px 18px;border-left:3px solid var(--line-strong);
+  background:var(--rail);border-radius:0 6px 6px 0;
+  font-size:15px;line-height:1.75;
+}
+.pg-text p{margin:0 0 12px}
+.pg-text p:last-child{margin-bottom:0}
+.pg-attr{font-size:12px;color:var(--ink-faint);margin:8px 0 0;padding-left:2px}
+.pg-move,.pg-write{font-size:14px;line-height:1.65;margin:14px 0 0}
+.pg-move p,.pg-write p{margin:6px 0 0}
+
+.layer-tabs{display:flex;gap:4px;margin:0 0 16px}
+.layer-tabs .tab{border:1px solid var(--line-strong);border-radius:6px;border-bottom-width:1px;margin:0;padding:4px 10px;font-size:13px}
+.layer-tabs .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* dependency map */
+.mapwrap{overflow:auto;border:1px solid var(--card-line);border-radius:var(--radius);background:#fff}
+.mapwrap svg{display:block}
+.node rect{transition:fill .12s}
+.node:hover rect{stroke:var(--accent);stroke-width:2}
+.node text{font-size:11px;fill:var(--ink);pointer-events:none}
+.edge{fill:none;stroke:var(--line-strong);stroke-width:1.2}
+
+/* ===========================================================================
+   PIPELINE DIAGRAM
+   The dependency map is small enough to take in whole; this one is not, so it
+   gets its own scroll pane with a sticky-ish stage gutter drawn into the SVG
+   rather than as DOM beside it — a separate label column would have to be kept
+   in vertical sync with the diagram through every zoom and scroll, and would
+   not survive being exported as an image.
+   =========================================================================== */
+/* Two columns, and the left one is allowed to be as narrow as it must be —
+   minmax(0,1fr) rather than 1fr, or the SVG's intrinsic width would set the
+   floor and put the grid itself into overflow. */
+.pipegrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start;margin-top:12px}
+.pipeside{position:sticky;top:0;align-self:start;max-height:calc(100vh - 110px);overflow:auto}
+/* 1400, not the ~1080 a content-width guess suggests: the rail takes 260 and the
+   page padding another 80 before the grid sees any of it, so a 1180 viewport
+   leaves the diagram 440px and scales the labels into illegibility. Below this
+   the panel goes under the diagram, which costs the side-by-side reading and
+   keeps the diagram readable — the right trade in that order. */
+@media(max-width:1400px){
+  .pipegrid{grid-template-columns:minmax(0,1fr)}
+  .pipeside{position:static;max-height:none}
+  .pipeside .card{max-width:46rem}
+}
+.pipewrap{border:1px solid var(--card-line);border-radius:var(--radius);background:#fff;overflow:hidden;max-width:920px}
+/* No horizontal scroll, ever: the SVG takes the column's width and its height
+   follows from the viewBox. */
+.pipewrap svg{display:block;width:100%;height:auto}
+.pnode rect{transition:fill .12s,stroke .12s}
+.pnode:hover rect{stroke:var(--accent);stroke-width:2}
+/* 11px rather than the 11.5 the rest of the page uses for small labels: the
+   node is 150 wide with 10 of padding, and the authored titles run to 21
+   characters. At 11.5 the widest of them touch the box edge. */
+.pnode .pt{font-size:11px;font-weight:600;fill:var(--ink);pointer-events:none}
+.pnode .ps{font-size:9.5px;fill:var(--ink-soft);pointer-events:none}
+/* Selection is drawn as a ring on the node plus a dim on everything unrelated.
+   Dimming rather than hiding keeps the shape of the pipeline legible while you
+   read one step of it — you can still see where the step sits. */
+.pnode.on rect{stroke:var(--ink);stroke-width:2.2}
+.pipe.sel .pnode.dim{opacity:.24}
+.pipe.sel .pedge.dim{opacity:.12}
+.pedge{fill:none;stroke:var(--line-strong);stroke-width:1.2}
+.pedge.hot{stroke:var(--accent);stroke-width:2}
+.pedge.dash{stroke-dasharray:4 3}
+.plane{font-size:10px;fill:var(--ink-faint);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.pband{fill:var(--rail)}
+.pstar{font-size:11px;fill:var(--pill-yellow-dot)}
+/* The stat chips under a step. Tabular numerals so a column of them lines up. */
+.pnums{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.pnum{
+  border:1px solid var(--line);border-radius:6px;background:var(--rail);
+  padding:4px 9px;font-size:12px;line-height:1.35;
+}
+.pnum b{display:block;font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--ink-faint)}
+.pnum span{font-variant-numeric:tabular-nums}
+.pio{
+  display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:12px 0 0;
+  font-size:12.5px;color:var(--ink-soft);
+}
+.pio div{flex:1 1 200px;min-width:0}
+.pio b{display:block;font-size:10px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--ink-faint);margin-bottom:2px}
+/* Panel chrome. The card is the positioning context for the clear-selection
+   affordance, which is a link to #/pipeline rather than a button because
+   selection lives in the route. */
+.pipeside .card{position:relative}
+.pclose{
+  position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:5px;
+  display:grid;place-items:center;color:var(--ink-faint);font-size:17px;line-height:1;
+  text-decoration:none;
+}
+.pclose:hover{background:var(--hover);color:var(--ink)}
+.pipeside .sec{font-size:13px;margin-top:18px}
+.pipeside .prose p{margin:0 0 9px}
+.pipeside .pnum{font-size:11.5px}
+.pipeside .note{font-size:12.5px}
+
+/* flashcard + interview surfaces */
+.stage{max-width:46rem}
+.face{font-size:19px;line-height:1.55;font-weight:500;margin:0 0 6px}
+.reveal{border-top:1px dashed var(--line-strong);margin-top:16px;padding-top:16px}
+/* Confidence buttons are taller than an ordinary button because the hint under
+   the label is doing real work — it is what stops "I know this" drifting into
+   "this looks familiar". */
+.btn.conf{flex-direction:column;align-items:flex-start;gap:1px;padding:7px 12px;text-align:left}
+.btn.conf .chint{font-size:11px;font-weight:400;opacity:.72}
+.claim{
+  display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;
+  margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line);
+}
+.claim .faint{font-size:12px;flex:1;min-width:14rem}
+.rubric{list-style:none;padding:0;margin:8px 0 0}
+.rubric li{display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:13px;line-height:1.55}
+.rubric input{margin-top:3px;accent-color:var(--accent)}
+.progressline{display:flex;gap:3px;margin:0 0 18px}
+.progressline i{height:3px;flex:1;border-radius:999px;background:var(--pill-grey-bg)}
+.progressline i.done{background:var(--ink-faint)}
+.progressline i.now{background:var(--accent)}
+.progressline i.g{background:var(--pill-green-dot)}
+.progressline i.a{background:var(--pill-yellow-dot)}
+.progressline i.r{background:var(--pill-red-dot)}
+
+.heat{display:flex;flex-wrap:wrap;gap:4px}
+.heat span{
+  width:100%;max-width:16px;height:16px;border-radius:3px;background:var(--pill-grey-bg);
+  display:block;
+}
+
+/* the bullet digest */
+details.notes{
+  border:1px solid var(--line-strong);border-radius:var(--radius);
+  background:var(--rail);margin:0 0 22px;max-width:46rem;
+}
+details.notes > summary{
+  display:flex;align-items:center;gap:8px;cursor:pointer;padding:11px 14px;
+  list-style:none;user-select:none;border-radius:var(--radius);
+}
+details.notes > summary::-webkit-details-marker{display:none}
+details.notes > summary:hover{background:var(--hover)}
+details.notes[open] > summary{border-bottom:1px solid var(--line);border-radius:var(--radius) var(--radius) 0 0}
+.nt-h{font-size:13.5px;font-weight:600}
+.nt-s{font-size:12px;color:var(--ink-faint);flex:1;min-width:0}
+/* A caret that turns, so the control reads as a control rather than a heading. */
+details.notes > summary::after{
+  content:"›";font-size:16px;color:var(--ink-faint);transition:transform .15s;
+}
+details.notes[open] > summary::after{transform:rotate(90deg)}
+.notelist{margin:0;padding:12px 18px 4px 32px;font-size:14.5px;line-height:1.6}
+.notelist li{margin:0 0 10px}
+.notelist li::marker{color:var(--ink-faint)}
+.notelist strong{font-weight:600}
+.notelist code{font-size:.9em}
+.nt-foot{
+  font-size:12px;color:var(--ink-faint);margin:0;padding:4px 18px 12px;
+  line-height:1.55;
+}
+@media(max-width:640px){
+  .nt-s{display:none}                      /* the subtitle is the first thing to go */
+  .notelist{padding-left:26px;font-size:14px}
+}
+/* autoplay countdown */
+.autocard{position:relative;overflow:hidden}
+.autoStrip{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.auto-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.auto-txt{font-size:12px;color:var(--ink-soft);flex:1;min-width:12rem}
+.auto-txt b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.auto-rail{height:3px;border-radius:999px;background:var(--pill-grey-bg);overflow:hidden;margin-bottom:8px}
+.auto-rail > i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px}
+/* The bar only animates once the card is armed, so an un-armed card shows an
+   empty rail rather than a countdown that already ran. */
+.autocard.counting .auto-rail > i{animation:autofill 3s linear forwards}
+.autocard.stopped .auto-rail > i{animation:none;width:0}
+.autocard.stopped{opacity:.92}
+@keyframes autofill{from{width:0}to{width:100%}}
+@media(prefers-reduced-motion:reduce){
+  .autocard.counting .auto-rail > i{animation:none;width:100%}
+}
+/* method page */
+.mth{padding:22px 0;border-bottom:1px solid var(--line);max-width:46rem}
+.mth:last-of-type{border-bottom:none}
+.mth-h{font-size:19px;font-weight:600;margin:0 0 4px;letter-spacing:-.01em}
+.mth-where{font-size:12.5px;color:var(--ink-faint);margin:0 0 12px}
+.mth-ev{
+  border-left:3px solid var(--pill-purple-dot);background:var(--pill-purple-bg);
+  padding:9px 14px;border-radius:0 6px 6px 0;font-size:13px;line-height:1.6;margin-top:4px;
+}
+.mth-ev .eyebrow{display:block;margin-bottom:3px}
+.mth-note{font-size:13px;color:var(--ink-soft);line-height:1.6;margin:12px 0 0}
+.srcrow{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.srcrow:last-child{border-bottom:none}
+.srcrow code{background:none;padding:0;color:var(--ink-soft)}
+
+.empty{color:var(--ink-faint);font-size:13px;padding:18px 0}

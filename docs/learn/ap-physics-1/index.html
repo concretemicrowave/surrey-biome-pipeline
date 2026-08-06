@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AP Physics 1 — Learning Centre</title>
+
+<!--
+  A study centre for AP Physics 1: Algebra-Based, built for a May 2027 exam.
+
+  Same engine as the other centres: no framework, no build step, no CDN, no
+  network. It opens from file:// and keeps every byte of progress in
+  localStorage under its own key.
+
+  WHERE THE CONTENT COMES FROM. Everything taught here traces to the College
+  Board Course and Exam Description — the current edition, incorporating the
+  clarifications implemented for Fall 2026, which is the one governing a May
+  2027 exam. A single extract of that document was made once and every writer
+  worked from that one copy, so the centre cannot disagree with itself about
+  what the syllabus says. Every concept carries the CED topic code it came
+  from, and selfCheck() refuses a concept that does not.
+
+  WHY content.js IS A SEPARATE FILE. The Surrey centre keeps its content
+  literals inline, because a person wrote them one at a time. This centre's
+  concepts, cards, questions and question banks were drafted unit by unit and
+  merged, so they live in a generated file and this one stays hand-written.
+  Both are ordinary classic scripts — nothing here is a build step, and the
+  page still opens from a file with no server.
+
+  This centre is NOT affiliated with, endorsed by, or produced by the College
+  Board. AP is their trademark.
+-->
+
+<link rel="stylesheet" href="../shared/centre.css" />
+<style>
+/* Centre-local styling only. Anything shared with the other centres belongs in
+   ../shared/centre.css; anything that is furniture for this course's own views
+   belongs here, so a change for physics cannot reach the English centre. */
+
+/* The unit group with no colour of its own in the shared palette. */
+.p-slate{background:#e6e8ec;color:#2f3542}
+.p-slate .dot{background:#7b8494}
+
+/* ---- formula sheet ---- */
+.eqgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.eqcard{border:1px solid var(--card-line);border-radius:var(--radius);background:#fff;padding:14px 16px}
+.eqcard.notgiven{border-color:var(--pill-red-dot);background:#fffaf9}
+.eqhead{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.eqname{font-weight:600;font-size:14px;flex:1;min-width:0}
+.eqtex{font-size:18px;padding:10px 0;text-align:center;overflow-x:auto}
+.eqvars{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--ink-soft);
+        border-top:1px solid var(--line);padding-top:8px}
+.eqv b{font-weight:500;color:var(--ink)}
+.eqwhen{font-size:13px;line-height:1.55;margin-top:10px}
+.eqnote{font-size:12.5px;line-height:1.55;margin-top:8px;color:var(--ink-soft)}
+
+/* ---- units ---- */
+.ubar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin-bottom:4px;min-width:80px}
+.ubar i{display:block;height:100%;background:var(--pill-green-dot)}
+
+/* ---- exam simulator ---- */
+.examtop{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+         border-bottom:1px solid var(--line);padding-bottom:12px}
+.clock{margin-left:auto;font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;
+       letter-spacing:-.02em}
+.clock.low{color:var(--pill-red-ink)}
+.qnav{display:flex;flex-wrap:wrap;gap:4px;margin-top:14px}
+.qn{width:28px;height:26px;border:1px solid var(--line-strong);border-radius:5px;background:#fff;
+    font-size:11px;color:var(--ink-soft);padding:0;cursor:pointer}
+.qn.done{background:var(--rail);color:var(--ink);font-weight:600}
+.qn.flag{border-color:var(--pill-orange-dot)}
+.qn.now{background:var(--ink);color:#fff;border-color:var(--ink)}
+.opts{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;
+     border:1px solid var(--line-strong);border-radius:8px;background:#fff;padding:11px 14px;
+     font-size:14.5px;line-height:1.55;cursor:pointer;transition:border-color .12s,background .12s}
+.opt:hover{border-color:var(--accent)}
+.opt.on{border-color:var(--ink);background:var(--rail)}
+.optl{font-weight:700;color:var(--ink-faint);flex:0 0 auto}
+.opt.on .optl{color:var(--ink)}
+.optt{flex:1;min-width:0}
+.frparts{margin:14px 0 0;padding-left:20px;font-size:14.5px;line-height:1.7}
+.frparts li{margin:0 0 8px}
+.guide{margin-top:12px}
+.gpart{border:1px solid var(--card-line);border-radius:var(--radius);background:#fff;
+       padding:12px 16px;margin-bottom:10px}
+.gplabel{font-weight:600;font-size:13px;color:var(--ink-soft);margin-bottom:4px}
+</style>
+</head>
+
+<body>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="app">
+  <aside class="rail nsb" id="rail">
+    <div class="rail-head">
+      <div class="mark">🎢</div>
+      <div class="rail-title">AP Physics 1</div>
+    </div>
+    <div class="rail-scroll nsb" id="nav"></div>
+    <div class="rail-foot">
+      <button class="navrow" data-go="method">
+        <span class="ico" data-ico="spark"></span> How this site teaches
+      </button>
+      <button class="navrow" data-go="sources">
+        <span class="ico" data-ico="file"></span> Sources &amp; integrity
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="hamb" id="hamb" aria-label="Menu"><span data-ico="menu"></span></button>
+      <div class="crumb"><span data-ico="book"></span><b id="crumb">Overview</b></div>
+      <div class="spacer"></div>
+      <span class="faint num" id="duebadge"></span>
+      <button class="btn sm" id="tutorbtn" hidden><span data-ico="ask"></span> Ask</button>
+    </header>
+    <div class="scroll nsb" id="view"></div>
+  </div>
+</div>
+
+<button class="asksel" id="asksel"><span data-ico="ask"></span> Ask</button>
+
+<aside class="tutor" id="tutor" hidden>
+  <div class="tutor-head">
+    <span data-ico="ask" style="color:var(--ink-soft)"></span>
+    <b>Ask</b>
+    <button class="btn ghost sm" id="tutorclear">Clear</button>
+    <button class="btn ghost sm" id="tutorclose">Close</button>
+  </div>
+  <div class="tutor-ctx" id="tutorctx"></div>
+  <div class="tutor-log nsb" id="tutorlog"></div>
+  <form class="tutor-ask" id="tutorform">
+    <textarea id="tutorin" rows="1" placeholder="Explain this…"></textarea>
+    <button class="btn primary sm" type="submit">Send</button>
+  </form>
+</aside>
+
+<!-- The drafted material: concepts, cards, questions, the equation sheet, the
+     exam structure and the question banks. Generated; see the note at the top
+     of this file. -->
+<script src="content.js"></script>
+
+<script>
+"use strict";
+
+/* ===========================================================================
+   THIS CENTRE'S OWN FURNITURE
+   Hand-written, unlike content.js: the groups, the unit table, the science
+   practices, the method essay, the source list, and the CENTRE config that
+   ties the whole thing together.
+   =========================================================================== */
+
+var GROUPS = [
+  {id:"u1",     label:"Kinematics",                              pill:"p-blue"},
+  {id:"u2",     label:"Force & translational dynamics",          pill:"p-purple"},
+  {id:"u3",     label:"Work, energy, and power",                 pill:"p-orange"},
+  {id:"u4",     label:"Linear momentum",                         pill:"p-green"},
+  {id:"u5",     label:"Torque & rotational dynamics",            pill:"p-pink"},
+  {id:"u6",     label:"Energy & momentum of rotating systems",   pill:"p-yellow"},
+  {id:"u7",     label:"Oscillations",                            pill:"p-red"},
+  {id:"u8",     label:"Fluids",                                  pill:"p-slate"},
+  {id:"skills", label:"Practices & experimental design",         pill:"p-grey"}
+];
+
+/* The course as the CED orders it. `share` is the fraction of a simulated
+   Section I drawn from each unit — the midpoint of the published weighting
+   range, normalised so the eight shares sum to one. It is a sampling weight,
+   not a claim about the real exam's composition. */
+var UNITS = [
+  {n:1, group:"u1", title:"Kinematics",                            weight:"10–15%", topics:"5 topics · CED 1.1–1.5",
+   share:0.120, gist:"Describing motion before asking what causes it."},
+  {n:2, group:"u2", title:"Force and Translational Dynamics",      weight:"18–23%", topics:"9 topics · CED 2.1–2.9",
+   share:0.197, gist:"Systems, free-body diagrams, and the three laws."},
+  {n:3, group:"u3", title:"Work, Energy, and Power",               weight:"18–23%", topics:"5 topics · CED 3.1–3.5",
+   share:0.197, gist:"The bookkeeping that works when forces are messy."},
+  {n:4, group:"u4", title:"Linear Momentum",                       weight:"10–15%", topics:"4 topics · CED 4.1–4.4",
+   share:0.120, gist:"Collisions, and the law that survives them."},
+  {n:5, group:"u5", title:"Torque and Rotational Dynamics",        weight:"10–15%", topics:"6 topics · CED 5.1–5.6",
+   share:0.120, gist:"The same physics, about an axis."},
+  {n:6, group:"u6", title:"Energy and Momentum of Rotating Systems", weight:"5–8%", topics:"6 topics · CED 6.1–6.6",
+   share:0.0625, gist:"Rolling, spinning, and staying in orbit."},
+  {n:7, group:"u7", title:"Oscillations",                          weight:"5–8%",  topics:"4 topics · CED 7.1–7.4",
+   share:0.0625, gist:"Simple harmonic motion — still in the course."},
+  {n:8, group:"u8", title:"Fluids",                                weight:"10–15%", topics:"4 topics · CED 8.1–8.4",
+   share:0.120, gist:"New to Physics 1, and worth as much as kinematics."}
+];
+
+var PRACTICES = [
+  {code:"Practice 1", name:"Creating Representations",
+   gist:"Diagrams, graphs and sketches that represent a physical situation. Not assessed in the multiple-choice section at all — it lives in the free-response."},
+  {code:"Practice 2", name:"Mathematical Routines",
+   gist:"Deriving, calculating, estimating, comparing and predicting. The bulk of the multiple-choice section."},
+  {code:"Practice 3", name:"Scientific Questioning and Argumentation",
+   gist:"Designing procedures, analysing data, and supporting a claim with evidence. What the experimental-design question is made of."}
+];
+
+/* ---- how this site teaches -----------------------------------------------
+   The learning science is the same wherever it is applied, so this is the
+   Surrey centre's method essay with its examples changed to this course. The
+   evidence is cited because the gates are annoying and an annoying gate with
+   no reason behind it gets routed around. */
+var METHOD = [
+  {
+    name:"Guess before you read",
+    where:"Every concept page opens with one question and a blank box.",
+    why:"Reading an explanation you have not tried to produce is the cheapest possible encounter "+
+      "with it. Everything makes sense, nothing sticks, and what you take away is mostly the "+
+      "feeling of having understood. Attempting first — and failing — changes what the prose is: "+
+      "it arrives as the resolution to a question you are actually holding.",
+    evidence:"Kornell, Hays & Bjork (2009); Richland, Kornell & Kao (2009). A failed retrieval "+
+      "attempt before study beats spending the same time studying. The errors are not a cost paid "+
+      "for the benefit — they appear to be part of the mechanism.",
+    note:"Write the wrong thing rather than nothing. A blank is a weaker pretest than a bad guess."
+  },
+  {
+    name:"Commit to a confidence, then look",
+    where:"Flashcards ask how sure you are, and that button is what reveals the answer.",
+    why:"Grading yourself after seeing the answer is the one place this app could quietly lie to "+
+      "itself. Recognising a correct answer is easy and feels almost exactly like having known it. "+
+      "Taking the claim before the answer is on screen makes it a prediction, which can be scored.",
+    evidence:"The delayed-judgement-of-learning literature: confidence judgements made while the "+
+      "material is still on screen track fluency rather than memory, and are systematically "+
+      "inflated. Judgements made without that crutch are far better calibrated.",
+    note:"In physics the inflation is specific and predictable: following a worked solution feels "+
+      "identical to being able to produce one. It is not."
+  },
+  {
+    name:"Spacing, and coming back to what you got wrong",
+    where:"Cards return on a schedule that lengthens when you are right and collapses when you "+
+      "are not. Three correct recalls on three separate days is the criterion.",
+    why:"Massed practice produces fast, confident, short-lived learning. Spaced practice feels "+
+      "worse while you do it and is what is still there in May. The schedule is built to make the "+
+      "uncomfortable option the default one.",
+    evidence:"Rawson & Dunlosky's criterion work on successive relearning; Cepeda et al. on the "+
+      "spacing effect across hundreds of studies.",
+    note:"The due count in the sidebar is the only number on this site worth chasing daily."
+  },
+  {
+    name:"Worked examples that show their reasoning",
+    where:"Every concept carries a worked problem where each step says why that step.",
+    why:"A solution that prints only its moves teaches you to copy moves, which works until the "+
+      "numbers change. The decision — energy rather than kinematics, this system boundary, this "+
+      "axis — is the part that transfers, and it is exactly the part a clean solution hides.",
+    evidence:"The worked-example effect (Sweller and colleagues) holds most strongly when the "+
+      "example is elaborated rather than bare, and fades as expertise grows — which is why the "+
+      "examples here explain themselves rather than being minimal.",
+    note:"Cover the solution, try the problem, then compare your route to the one given. Two "+
+      "correct routes are common in this subject and the comparison is the lesson."
+  },
+  {
+    name:"An exam in the exam's own shape",
+    where:"The simulator runs 42 questions in 85 minutes, then four free-response questions in 95.",
+    why:"Pacing is a skill and it is the one most easily practised and most often left "+
+      "unpractised. Two minutes a question is not a fact you learn, it is a rhythm you acquire. "+
+      "The free-response section is then scored point by point against a guideline, because a "+
+      "holistic self-grade is a guess dressed as a mark.",
+    evidence:"The testing effect: retrieval under conditions resembling the criterion task "+
+      "transfers better than restudy, and the resemblance matters.",
+    note:"Section II is handwritten in the real exam. Work it on paper here too — typing a "+
+      "derivation you would have written by hand is practising a different task."
+  }
+];
+
+/* The question-bank presets. `n` is how many questions a run serves; `tier`
+   filters to one difficulty band and `weakest` reorders by what the scheduler
+   says you are worst at. Keys must match CENTRE.mock.order. */
+var PRESETS = {
+  explain: {label:"Explain it", emo:"💬", n:10, tier:1,
+    blurb:"Tier 1. No numbers. Can you say what the idea is, out loud, to someone who has not met it?"},
+  compute: {label:"Work it out", emo:"🔢", n:10, tier:2,
+    blurb:"Tier 2. The quantitative ones — can you actually get the number, with units, under time?"},
+  traps:   {label:"The traps", emo:"⚠️", n:10, tier:3,
+    blurb:"Tier 3. The sign error, the normal force that is not mg, the two conservation laws that are not the same law."},
+  weakest: {label:"Your weakest", emo:"🎯", n:12, weakest:true,
+    blurb:"Questions tagged to the concepts your own card record says you are shakiest on."}
+};
+
+var SOURCES = [
+  {label:"AP Physics 1: Algebra-Based Course and Exam Description",
+   what:"The syllabus, and the only source of truth for this centre. Every unit, topic code, "+
+        "learning objective, essential knowledge statement, exam weighting, the exam format and "+
+        "the provided equation sheet. Version V.1, stated effective Fall 2024, incorporating the "+
+        "clarifications implemented for Fall 2026 — the edition governing a May 2027 exam.",
+   url:"https://apcentral.collegeboard.org/media/pdf/ap-physics-1-course-and-exam-description.pdf",
+   fetched:"2026-08-05"},
+  {label:"AP Central — how AP Exams are administered, by course",
+   what:"Established that Physics 1 is hybrid digital for 2027: multiple choice answered in "+
+        "Bluebook, free-response answers handwritten in paper booklets. Physics 1 is not among "+
+        "the courses changing mode for 2027.",
+   url:"https://apcentral.collegeboard.org/",
+   fetched:"2026-08-05"},
+  {label:"Barron's AP Physics 1 Premium, 2024",
+   what:"Used ONLY as the old side of a diff — see CHANGES_SINCE_2024.md. Nothing in this centre "+
+        "is taught from it. Its exam description is superseded in several respects, which is "+
+        "precisely why the diff exists.",
+   url:null,
+   fetched:"2026-08-05"}
+];
+
+/* ===========================================================================
+   THE CENTRE
+   =========================================================================== */
+var CENTRE = {
+  id:         "ap-physics-1",
+  title:      "AP Physics 1",
+  emoji:      "🎢",
+  storageKey: "ap_physics_1_learn_v1",
+
+  /* Every concept must cite a CED topic, a science practice, or the exam
+     format section, and selfCheck() reports any that does not. The pattern is
+     what stops a concept satisfying the check by carrying the word "CED" and
+     nothing else. */
+  requireSource:  true,
+  sourcePattern:  "^(CED \\d+\\.\\d+|Practice \\d+\\.[A-D]|Exam format)$",
+
+  routes: [
+    {id:"overview", label:"Overview",        ico:"spark",  section:"Study"},
+    {id:"learn",    label:"Concepts",        ico:"book"},
+    {id:"map",      label:"Dependency map",  ico:"layers"},
+    {id:"units",    label:"Units",           ico:"hash"},
+    {id:"formula",  label:"Formula sheet",   ico:"file"},
+    {id:"cards",    label:"Flashcards",      ico:"cards",  section:"Drill"},
+    {id:"recall",   label:"Blank page",      ico:"file"},
+    {id:"practice", label:"Flip through",    ico:"book"},
+    {id:"mock",     label:"Explain it",      ico:"target"},
+    {id:"exam",     label:"Exam simulator",  ico:"clock",  section:"Sit it"},
+    {id:"progress", label:"Progress",        ico:"chart"}
+  ],
+
+  /* The question-bank view, reframed. Same engine, different examiner. */
+  mock: {
+    emoji: "🎯",
+    title: "Explain it",
+    lede:  "A question appears. You answer it out loud, in your own words, before you reveal " +
+           "anything. Then you score yourself honestly — Green only if you could survive two " +
+           "follow-ups, Red if you bluffed. Reds come back in later sessions without warning.",
+    order: ["explain","compute","traps","weakest"],
+    note:  "<strong>The scoring rule.</strong><br>" +
+           "<strong>Green</strong> — you produced it, correctly, and could handle a follow-up. " +
+           "<strong>Amber</strong> — right but shallow, or you needed the hint. " +
+           "<strong>Red</strong> — wrong, or you recognised the answer rather than producing it. " +
+           "Reading a solution and thinking “yes, that is what I would have done” is a Red."
+  },
+
+  /* The self-explanation gate. Surrey asks why a design decision was made;
+     a course centre asks why a rule holds. */
+  why: {
+    head:   "Why it works this way",
+    ask:    "Before you read the answer — why do you think this is true, and what would go wrong " +
+            "if it were not?",
+    reveal: "Show me the reasoning"
+  },
+
+  tutorRoot: "docs/learn/ap-physics-1/",
+
+  overviewTitle: "AP Physics 1 Learning Centre",
+  lede: "The whole course, taught from first principles, drilled until automatic, and then sat " +
+        "under a clock in the exam's own shape. Built from the current Course and Exam " +
+        "Description — every concept cites the topic it came from.",
+
+  startHere: [
+    {href:"#/units", pill:"p-blue", eyebrow:"Start here",
+     title:"What the course actually is now",
+     body:"Eight units, 43 topics, and the weightings that tell you where the marks are. " +
+          "Fluids is new and worth as much as kinematics; most older material does not cover it."},
+    {href:"#/learn", pill:"p-green", eyebrow:"Foundations",
+     title:"Work the concept chain",
+     body:"From what a vector is, through free-body diagrams and the energy bookkeeping, to " +
+          "rotational dynamics — ordered so nothing depends on something you have not met."},
+    {href:"#/formula", pill:"p-orange", eyebrow:"Reference",
+     title:"Which equations you are handed",
+     body:"The provided sheet, what every symbol means, and the cue for reaching for one " +
+          "equation rather than its neighbour — plus the ones you are not handed."},
+    {href:"#/exam", pill:"p-pink", eyebrow:"Under the clock",
+     title:"Sit a section",
+     body:"42 questions in 85 minutes, then four free-response questions in 95, scored " +
+          "point by point against a guideline rather than by feel."},
+    {href:"#/method", pill:"p-purple", eyebrow:"Read once",
+     title:"Why this site keeps getting in your way",
+     body:"The gates, the guessing and the spacing are all deliberate. Worth ten minutes " +
+          "before you decide to route around one of them."}
+  ],
+
+  aboutNote:
+    "<strong>What this site is.</strong> A study centre for AP Physics 1, built from the College " +
+    "Board Course and Exam Description for the year in effect for a <strong>May 2027</strong> " +
+    "exam. It is <strong>not affiliated with, endorsed by, or produced by the College Board</strong>. " +
+    "Every concept cites the CED topic it comes from; where something could not be grounded in " +
+    "that document, it was left out and listed rather than written confidently.",
+
+  sourcesLede:
+    "Every claim on this site traces to the Course and Exam Description. Nothing was invented for " +
+    "the sake of a lesson, and where the syllabus is silent, so is the site.",
+  sourcesNote:
+    "<strong>The honest note.</strong> " +
+    "This is a study aid assembled from one reading of the CED, so it inherits any error in that " +
+    "reading. The practice questions and free-response items are <strong>original</strong> and are " +
+    "not College Board material — where a real released question would be better practice, it is " +
+    "cited by year rather than reproduced. Exam weightings are published ranges, not promises. " +
+    "<br><br>" +
+    "<strong>One thing to discount as you read.</strong> The lessons here say things like " +
+    "“this is where the marks go”, “the exam tends to ask this”, and “students often get this " +
+    "wrong”. <strong>None of that comes from the Course and Exam Description</strong>, which " +
+    "publishes content, weightings and formats and says nothing about how questions are built or " +
+    "how often anyone errs. Those lines are the site’s own teaching judgement — usually a fair " +
+    "guide to what is genuinely subtle, but not evidence, and not something to repeat as fact. " +
+    "The physics, the topic codes, the weightings and the equation sheet are grounded; the " +
+    "commentary about the exam is not. " +
+    "<strong>AP</strong> is a trademark of the College Board.",
+
+  concepts:  CONCEPTS,
+  cards:     CARDS,
+  questions: QUESTIONS,
+  groups:    GROUPS,
+  presets:   PRESETS,
+  method:    METHOD,
+  sources:   SOURCES
+};
+</script>
+
+<script src="../shared/centre.js"></script>
+<script src="views.js"></script>
+<script>Centre.boot();</script>
+</body>
+</html>

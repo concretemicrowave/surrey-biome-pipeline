@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AP English Language — Learning Centre</title>
+
+<!--
+  A study centre for AP English Language and Composition, built for a May 2027
+  exam.
+
+  Same engine as the other centres: no framework, no build step, no CDN, no
+  network. It opens from file:// and keeps every byte of progress in
+  localStorage under its own key.
+
+  WHERE THE CONTENT COMES FROM. Everything traces to the College Board Course
+  and Exam Description, version V.1, effective Fall 2024 — the edition
+  governing a May 2027 exam. A single extract of that document was made once
+  and every writer worked from that one copy, so no two of them could end up
+  believing different things about the rubric. Every concept carries the skill
+  code or rubric row it came from, and selfCheck() refuses a concept that does
+  not.
+
+  THE RUBRICS ARE QUOTED, NOT PARAPHRASED. On that one page fidelity beats
+  voice: a student practises against those exact sentences and is scored
+  against them. Every descriptor, decision rule and note in RUBRICS was
+  transcribed from the CED and checked back against it as an exact substring.
+  The surrounding "how you earn it" and "how you lose it" commentary is this
+  site's own.
+
+  NO REAL EXAM MATERIAL. Every essay prompt, drill passage and practice
+  question here is original and says so. Released College Board questions are
+  cited, never reproduced.
+
+  WHY THERE IS NO DEPENDENCY MAP. The other centre has one because physics has
+  real prerequisite structure — you cannot do energy before dynamics. These
+  concepts are mostly lateral: you do not have to master exigence before
+  audience, and a diagram implying you did would be a diagram of nothing. The
+  prerequisite chains that do exist are short and live inside a single strand,
+  and the concept list already shows them in order.
+
+  This centre is NOT affiliated with, endorsed by, or produced by the College
+  Board. AP is their trademark.
+-->
+
+<link rel="stylesheet" href="../shared/centre.css" />
+<style>
+/* Centre-local styling only. Anything shared with the other centres belongs in
+   ../shared/centre.css. */
+
+/* ---- rubric rows ---- */
+.levels{display:flex;flex-direction:column;gap:8px;margin:10px 0 0}
+.level{border:1px solid var(--card-line);border-radius:var(--radius);background:#fff;
+       padding:12px 16px;text-align:left;width:100%;display:block}
+.level.zero{background:var(--rail)}
+.lvhead{display:flex;gap:8px;align-items:center;font-weight:600;font-size:13px;
+        color:var(--ink-soft);margin-bottom:6px}
+.lvpts{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;
+       border-radius:11px;background:var(--ink);color:#fff;font-size:12px;font-weight:700}
+.level.zero .lvpts{background:var(--ink-faint)}
+.lvdesc{font-size:14.5px;line-height:1.6}
+.lvbul{margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.6;color:var(--ink-soft)}
+.lvbul li{margin:3px 0}
+button.level.pick{cursor:pointer;transition:border-color .12s,box-shadow .12s}
+button.level.pick:hover{border-color:var(--accent)}
+button.level.pick.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+
+/* ---- devices ---- */
+.dev{display:flex;flex-direction:column}
+.devhead{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px}
+.devdef{font-size:14px;line-height:1.6}
+.devex{margin:10px 0 0;padding:8px 14px;border-left:2px solid var(--line-strong);
+       background:var(--rail);border-radius:0 5px 5px 0;font-size:14px;line-height:1.65}
+.devattr{font-size:11.5px;color:var(--ink-faint);margin:5px 0 0}
+.deveff{font-size:13.5px;line-height:1.6;margin:10px 0 0}
+.devconf{font-size:12.5px;line-height:1.55;margin:8px 0 0;color:var(--ink-soft);
+         border-top:1px solid var(--line);padding-top:8px}
+
+/* ---- workshop ---- */
+.examtop{display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+         border-bottom:1px solid var(--line);padding-bottom:12px}
+.clock{margin-left:auto;font-variant-numeric:tabular-nums;font-size:22px;font-weight:700;
+       letter-spacing:-.02em}
+.clock.low{color:var(--pill-red-ink)}
+.essaybox{min-height:420px;margin-top:16px;font-size:15.5px;line-height:1.8;
+          font-family:Georgia,"Iowan Old Style",serif}
+
+/* ---- drill ---- */
+.drillq{margin:22px 0 0;padding-top:18px;border-top:1px solid var(--line)}
+.dqstem{font-size:15px;line-height:1.6;margin-bottom:10px}
+.opt{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;
+     border:1px solid var(--line-strong);border-radius:8px;background:#fff;padding:10px 13px;
+     font-size:14px;line-height:1.55;cursor:pointer;margin-bottom:6px;
+     transition:border-color .12s,background .12s}
+.opt:hover:enabled{border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--pill-green-dot);background:#f6fbf7}
+.opt.wrong{border-color:var(--pill-red-dot);background:#fff8f7}
+.optl{font-weight:700;color:var(--ink-faint);flex:0 0 auto}
+.optt{flex:1;min-width:0}
+.pg-text.numbered p{counter-increment:pgline}
+</style>
+</head>
+
+<body>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="app">
+  <aside class="rail nsb" id="rail">
+    <div class="rail-head">
+      <div class="mark">✍️</div>
+      <div class="rail-title">AP English Lang</div>
+    </div>
+    <div class="rail-scroll nsb" id="nav"></div>
+    <div class="rail-foot">
+      <button class="navrow" data-go="method">
+        <span class="ico" data-ico="spark"></span> How this site teaches
+      </button>
+      <button class="navrow" data-go="sources">
+        <span class="ico" data-ico="file"></span> Sources &amp; integrity
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="hamb" id="hamb" aria-label="Menu"><span data-ico="menu"></span></button>
+      <div class="crumb"><span data-ico="book"></span><b id="crumb">Overview</b></div>
+      <div class="spacer"></div>
+      <span class="faint num" id="duebadge"></span>
+      <button class="btn sm" id="tutorbtn" hidden><span data-ico="ask"></span> Ask</button>
+    </header>
+    <div class="scroll nsb" id="view"></div>
+  </div>
+</div>
+
+<button class="asksel" id="asksel"><span data-ico="ask"></span> Ask</button>
+
+<aside class="tutor" id="tutor" hidden>
+  <div class="tutor-head">
+    <span data-ico="ask" style="color:var(--ink-soft)"></span>
+    <b>Ask</b>
+    <button class="btn ghost sm" id="tutorclear">Clear</button>
+    <button class="btn ghost sm" id="tutorclose">Close</button>
+  </div>
+  <div class="tutor-ctx" id="tutorctx"></div>
+  <div class="tutor-log nsb" id="tutorlog"></div>
+  <form class="tutor-ask" id="tutorform">
+    <textarea id="tutorin" rows="1" placeholder="Explain this…"></textarea>
+    <button class="btn primary sm" type="submit">Send</button>
+  </form>
+</aside>
+
+<!-- The drafted material: concepts, cards, questions, the rubrics, the device
+     reference, the essay prompts and the drills. Generated; see the note at the
+     top of this file. -->
+<script src="content.js"></script>
+
+<script>
+"use strict";
+
+/* ===========================================================================
+   THIS CENTRE'S OWN FURNITURE
+   Hand-written, unlike content.js.
+   =========================================================================== */
+
+var GROUPS = [
+  {id:"rhet",    label:"Rhetorical situation",       pill:"p-blue"},
+  {id:"claim",   label:"Claims and evidence",        pill:"p-green"},
+  {id:"reason",  label:"Reasoning and organisation", pill:"p-orange"},
+  {id:"style",   label:"Style",                      pill:"p-purple"},
+  {id:"exam",    label:"The exam and its rubrics",   pill:"p-pink"},
+  {id:"devices", label:"Rhetorical devices",         pill:"p-yellow"}
+];
+
+var PRESETS = {
+  explain: {label:"Explain it", emo:"💬", n:10, tier:1,
+    blurb:"Tier 1. Can you say what the idea is, out loud, without reaching for a term?"},
+  apply:   {label:"Apply it", emo:"🖊️", n:10, tier:2,
+    blurb:"Tier 2. The rubric rows, the exam's own numbers, and what a given move actually does."},
+  traps:   {label:"The traps", emo:"⚠️", n:10, tier:3,
+    blurb:"Tier 3. Naming devices instead of explaining them, summary wearing analysis's clothes, the thesis nobody could disagree with."},
+  weakest: {label:"Your weakest", emo:"🎯", n:12, weakest:true,
+    blurb:"Questions tagged to the concepts your own card record says you are shakiest on."}
+};
+
+var METHOD = [
+  {
+    name:"Guess before you read",
+    where:"Every concept page opens with one question and a blank box.",
+    why:"Reading an explanation you have not tried to produce is the cheapest possible encounter "+
+      "with it. Everything makes sense, nothing sticks, and what you take away is mostly the "+
+      "feeling of having understood. Attempting first — and failing — changes what the prose is: "+
+      "it arrives as the resolution to a question you are actually holding.",
+    evidence:"Kornell, Hays & Bjork (2009); Richland, Kornell & Kao (2009). A failed retrieval "+
+      "attempt before study beats spending the same time studying. The errors are not a cost "+
+      "paid for the benefit — they appear to be part of the mechanism.",
+    note:"Write the wrong thing rather than nothing. A blank is a weaker pretest than a bad guess."
+  },
+  {
+    name:"Commit to a confidence, then look",
+    where:"Flashcards ask how sure you are, and that button is what reveals the answer.",
+    why:"Grading yourself after seeing the answer is the one place this app could quietly lie to "+
+      "itself. Recognising a correct answer is easy and feels almost exactly like having known "+
+      "it. Taking the claim before the answer is on screen makes it a prediction, which can be "+
+      "scored — and the Progress tab scores it.",
+    evidence:"The delayed-judgement-of-learning literature: confidence judgements made while the "+
+      "material is still on screen track fluency rather than memory, and are systematically "+
+      "inflated.",
+    note:"This subject inflates worse than most, because its vocabulary is easy to recognise and "+
+      "hard to use. Knowing what anaphora means is not the skill being tested."
+  },
+  {
+    name:"Score yourself against the row, not against a feeling",
+    where:"The essay workshop puts the rubric's real descriptors on screen while you mark your "+
+      "own writing.",
+    why:"Every essay is scored on three rows, independently, by a reader asking three yes-or-no "+
+      "questions. A self-assessment that produces an overall impression is measuring something "+
+      "the exam does not measure. Marking row by row, with the descriptors visible, is the only "+
+      "version of this exercise that transfers.",
+    evidence:"Rubric-referenced self-assessment improves performance when the criteria are "+
+      "specific and visible at the moment of judging, and not otherwise — the visibility is the "+
+      "active ingredient.",
+    note:"Row B is four of the six points and moves the slowest. The workshop tracks it "+
+      "separately for that reason."
+  },
+  {
+    name:"Spacing, and coming back to what you got wrong",
+    where:"Cards return on a schedule that lengthens when you are right and collapses when you "+
+      "are not. Three correct recalls on three separate days is the criterion.",
+    why:"Massed practice produces fast, confident, short-lived learning. Spaced practice feels "+
+      "worse while you do it and is what is still there in May.",
+    evidence:"Rawson & Dunlosky on successive relearning; Cepeda et al. on the spacing effect "+
+      "across hundreds of studies.",
+    note:"The due count in the sidebar is the only number here worth chasing daily."
+  },
+  {
+    name:"Read the question, not the passage",
+    where:"The passage drill explains every wrong option, not just the right answer.",
+    why:"This exam's multiple choice is a reading skill rather than a recall test, and its "+
+      "distractors are built to be true. An option can be an accurate statement about the "+
+      "passage and still not answer the question asked, and noticing that gap is most of the "+
+      "section. So the drill spends its effort on why each wrong option was tempting.",
+    evidence:"Feedback that explains the error outperforms feedback that only marks it, and the "+
+      "gap widens when the errors are systematic rather than careless.",
+    note:"If you got one right by eliminating three, read the explanation anyway. Eliminating is "+
+      "a different skill from recognising, and only one of them survives a harder passage."
+  }
+];
+
+var SOURCES = [
+  {label:"AP English Language and Composition Course and Exam Description",
+   what:"The syllabus, and the only source of truth for this centre. The nine units, the eight "+
+        "skill categories and their 22 skills, the exam format, and the complete scoring rubric "+
+        "for all three free-response questions — every row, decision rule and note. Version V.1, "+
+        "effective Fall 2024, the edition governing a May 2027 exam.",
+   url:"https://apcentral.collegeboard.org/media/pdf/ap-english-language-and-composition-course-and-exam-description.pdf",
+   fetched:"2026-08-05"},
+  {label:"AP Central — how AP Exams are administered, by course",
+   what:"Established that AP English Language and Composition is fully digital in Bluebook for "+
+        "2027, with essays typed and submitted in the app. Rubrics, timings and weights are "+
+        "unchanged by that.",
+   url:"https://apcentral.collegeboard.org/",
+   fetched:"2026-08-05"},
+  {label:"Barron's AP English Language and Composition Premium, 2024",
+   what:"Used ONLY as the old side of a diff — see CHANGES_SINCE_2024.md. Nothing here is taught "+
+        "from it. It presents a single rubric in running prose for all three essays, with no "+
+        "decision rules and no per-point exemplars, which is why the diff exists.",
+   url:null,
+   fetched:"2026-08-05"},
+  {label:"Released College Board free-response questions",
+   what:"CITED, NEVER REPRODUCED. The CED itself prints three sample questions — a synthesis "+
+        "question on the future of public libraries, a rhetorical-analysis question on "+
+        "Condoleezza Rice's 2012 commencement address at Southern Methodist University, and an "+
+        "argument question on Barbara Jordan's warning about private wants. Every prompt in this "+
+        "centre's workshop is original; work the real ones from College Board's own site "+
+        "alongside them.",
+   url:"https://apcentral.collegeboard.org/courses/ap-english-language-and-composition/exam",
+   fetched:"2026-08-05"}
+];
+
+/* ===========================================================================
+   THE CENTRE
+   =========================================================================== */
+var CENTRE = {
+  id:         "ap-english-lang",
+  title:      "AP English Language",
+  emoji:      "✍️",
+  storageKey: "ap_english_lang_learn_v1",
+
+  requireSource: true,
+  sourcePattern: "^(Skill [1-8]\\.[A-C]|Q[1-3] Row [ABC]|Exam format)$",
+
+  /* No `map`. See the note at the top of this file: these concepts are lateral,
+     and a dependency diagram would be drawing structure that is not there. */
+  routes: [
+    {id:"overview", label:"Overview",           ico:"spark",  section:"Study"},
+    {id:"learn",    label:"Concepts",           ico:"book"},
+    {id:"rubrics",  label:"Rubrics",            ico:"target"},
+    {id:"devices",  label:"Rhetorical devices", ico:"layers"},
+    {id:"cards",    label:"Flashcards",         ico:"cards",  section:"Drill"},
+    {id:"recall",   label:"Blank page",         ico:"file"},
+    {id:"practice", label:"Flip through",       ico:"book"},
+    {id:"mock",     label:"Explain it",         ico:"ask"},
+    {id:"workshop", label:"Essay workshop",     ico:"clock",  section:"Write"},
+    {id:"drill",    label:"Passage drill",      ico:"flow"},
+    {id:"progress", label:"Progress",           ico:"chart"}
+  ],
+
+  mock: {
+    emoji: "💬",
+    title: "Explain it",
+    lede:  "A question appears. You answer it out loud, in your own words, before you reveal " +
+           "anything. Then you score yourself honestly — Green only if you could survive two " +
+           "follow-ups, Red if you bluffed. Reds come back in later sessions without warning.",
+    order: ["explain","apply","traps","weakest"],
+    note:  "<strong>The scoring rule.</strong><br>" +
+           "<strong>Green</strong> — you produced it, correctly, and could handle a follow-up. " +
+           "<strong>Amber</strong> — right but shallow, or you needed the hint. " +
+           "<strong>Red</strong> — wrong, or you named a term instead of explaining an effect. " +
+           "Fluent prose that restates the question in better vocabulary is a Red, not an Amber."
+  },
+
+  why: {
+    head:   "Why the rubric rewards this",
+    ask:    "Before you read the answer — why do you think this earns the point, and what would " +
+            "a reader lose if you left it out?",
+    reveal: "Show me the reasoning"
+  },
+
+  tutorRoot: "docs/learn/ap-english-lang/",
+
+  overviewTitle: "AP English Language Learning Centre",
+  lede: "The eight skill categories, the three essays, and the rubric rows they are actually " +
+        "scored on — taught, drilled, and then written against a clock. Built from the current " +
+        "Course and Exam Description; every concept cites the skill it came from.",
+
+  startHere: [
+    {href:"#/rubrics", pill:"p-pink", eyebrow:"Start here",
+     title:"The rows you are scored on",
+     body:"Three rows, six points, scored independently — so a brilliant Row C cannot rescue a " +
+          "missing Row A. Most lost marks are lost here, mechanically, and they are written " +
+          "down in advance."},
+    {href:"#/learn", pill:"p-blue", eyebrow:"Foundations",
+     title:"Work the concept list",
+     body:"Rhetorical situation, claims and evidence, reasoning and organisation, style — the " +
+          "four things the exam measures, in the distinctions that actually get confused."},
+    {href:"#/workshop", pill:"p-green", eyebrow:"Under the clock",
+     title:"Write one in forty minutes",
+     body:"A prompt, the real time limit, a box. Then the rubric's own descriptors on screen " +
+          "while you mark yourself row by row. Every attempt is kept, so Row B can be watched."},
+    {href:"#/drill", pill:"p-orange", eyebrow:"Multiple choice",
+     title:"Read the question, not the passage",
+     body:"The exam's own question stems, and an explanation of why each wrong option was built " +
+          "to tempt you. That is where this section is won."},
+    {href:"#/method", pill:"p-purple", eyebrow:"Read once",
+     title:"Why this site keeps getting in your way",
+     body:"The gates, the guessing and the spacing are deliberate. Worth ten minutes before you " +
+          "decide to route around one of them."}
+  ],
+
+  aboutNote:
+    "<strong>What this site is.</strong> A study centre for AP English Language and Composition, " +
+    "built from the College Board Course and Exam Description for the year in effect for a " +
+    "<strong>May 2027</strong> exam. It is <strong>not affiliated with, endorsed by, or produced " +
+    "by the College Board</strong>. Rubric descriptors are quoted and attributed because you are " +
+    "scored against those exact sentences; every explanation around them is original. Every essay " +
+    "prompt and drill passage here was written for this site and says so.",
+
+  sourcesLede:
+    "Every claim on this site traces to the Course and Exam Description. Nothing was invented for " +
+    "the sake of a lesson, and where the syllabus is silent — as it is about what the Bluebook " +
+    "editor lets you do — the site says so rather than filling the gap.",
+  sourcesNote:
+    "<strong>The honest note.</strong> " +
+    "This is a study aid assembled from one reading of the CED, so it inherits any error in that " +
+    "reading. No passage here is a real exam passage and no prompt is a real exam prompt — they " +
+    "are original, and labelled. Where a real released question would be better practice, it is " +
+    "cited rather than reproduced. <strong>AP</strong> is a trademark of the College Board.",
+
+  concepts:  CONCEPTS,
+  cards:     CARDS,
+  questions: QUESTIONS,
+  groups:    GROUPS,
+  presets:   PRESETS,
+  method:    METHOD,
+  sources:   SOURCES
+};
+</script>
+
+<script src="../shared/centre.js"></script>
+<script src="views.js"></script>
+<script>Centre.boot();</script>
+</body>
+</html>

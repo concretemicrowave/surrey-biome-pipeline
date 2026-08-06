@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Local study server for the Learning Centre: static files + a grounded tutor.
+"""Local study server for the Learning Centres: static files + a grounded tutor.
 
-Run it, open the printed URL, and the page grows a "Ask" drawer. Stop it and the
-page is exactly what it was before — a self-contained file you can open from
+Run it, open the printed URL, and the pages grow an "Ask" drawer. Stop it and
+they are exactly what they were before — self-contained files you can open from
 ``file://`` with no network. That asymmetry is deliberate: the thing this is
 preparing for is a judging table in April 2027 with no wifi, so the tutor has to
 be a study-time convenience that cannot become a dependency.
@@ -10,8 +10,18 @@ be a study-time convenience that cannot become a dependency.
     export GEMINI_API_KEY=...        # already in ~/.config/zsh/95-secrets.zsh
     ./docs/learn/serve.py            # -> http://127.0.0.1:8000/learn/
 
-**What the model is allowed to see.** ``ALLOW`` below is the whole corpus, and
-it deliberately excludes two things:
+It serves the whole ``docs/`` tree, so the hub at ``/learn/`` and every centre
+under it — ``/learn/surrey/``, and the course centres as they are built — are
+all reachable from one origin. That shared origin is also what lets the hub read
+each centre's ``localStorage`` progress.
+
+**What the model is allowed to see, per centre.** ``CENTRES`` below gives each
+centre its own allow-list and its own system prompt. Nothing is global: a course
+centre cannot reach the Surrey project's documents and the Surrey centre cannot
+reach a course's, because a tutor that can see everything is a tutor that will
+eventually quote the wrong thing into the wrong answer.
+
+Surrey's list deliberately excludes two things:
 
 * ``docs/preprint/**`` — the manuscript is unpublished and under an embargo, and
   ``KNOWN_ISSUES.md`` is the withheld weakness register.
@@ -20,14 +30,15 @@ it deliberately excludes two things:
 That matters because the Gemini **free tier** trains on what you submit and
 human reviewers may read it ("Do not submit sensitive, confidential, or personal
 information to the Unpaid Services"). The paid tier does not. If you ever move
-this to a paid key you can widen ``ALLOW``, but decide it deliberately rather
+this to a paid key you can widen a list, but decide it deliberately rather
 than by forgetting.
 
-**Retrieval, not stuffing.** Each concept in the page carries a ``sourceDoc``
-path. Rather than sending all 280 KB every turn, the client says which concept
-it is on and the server attaches that concept's own text plus the one module it
-names. ~12k tokens a turn instead of ~70k, and the answer is better for it:
-the model reads the function being asked about instead of skimming everything.
+**Retrieval, not stuffing.** Each concept in a page carries a ``sourceDoc``
+path. Rather than sending all 280 KB every turn, the client says which centre and
+which concept it is on and the server attaches that concept's own text plus the
+one module it names. ~12k tokens a turn instead of ~70k, and the answer is
+better for it: the model reads the function being asked about instead of
+skimming everything.
 """
 
 from __future__ import annotations
@@ -51,11 +62,11 @@ API = "https://generativelanguage.googleapis.com/v1beta"
 # Override with GEMINI_MODEL if you want a specific one (e.g. gemini-pro-latest).
 MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")
 
-# Every file the tutor may be shown, relative to the repo root. Anything not
-# matched here is unreachable — the client names a path, the server checks it
+# Every file the Surrey tutor may be shown, relative to the repo root. Anything
+# not matched here is unreachable — the client names a path, the server checks it
 # against this list, and an unlisted path is simply dropped rather than errored,
 # so a stale sourceDoc degrades to "no source attached" instead of a broken page.
-ALLOW = [
+SURREY_ALLOW = [
     "docs/CORE_NARRATIVE.md",
     "docs/PHASE3_FINDINGS.md",
     "docs/deliverable/README.md",
@@ -63,10 +74,10 @@ ALLOW = [
     "ARCHITECTURE.md",
     "PHASE3_PLAN.md",
 ]
-ALLOW += [f"src/pipeline/{p.name}" for p in sorted((REPO / "src" / "pipeline").glob("*.py"))]
-ALLOW += [f"scripts/{p.name}" for p in sorted((REPO / "scripts").glob("*.py"))]
+SURREY_ALLOW += [f"src/pipeline/{p.name}" for p in sorted((REPO / "src" / "pipeline").glob("*.py"))]
+SURREY_ALLOW += [f"scripts/{p.name}" for p in sorted((REPO / "scripts").glob("*.py"))]
 
-SYSTEM = """\
+SURREY_SYSTEM = """\
 You are a tutor for one specific research project: a study of whether scale-free
 downscaled climate data (ClimateBC) predicts water stress in the City of Surrey's
 Green Infrastructure Network corridors better than coarse grid climate does.
@@ -138,6 +149,84 @@ register, and you do not need them. If asked something that clearly depends on
 them, say so plainly rather than guessing.\
 """
 
+# One entry per centre, keyed by the ``id`` in that centre's own CENTRE config.
+# ``allow`` is the whole corpus that centre's tutor may be shown and ``spine`` is
+# what it grounds on when no concept is open. A centre that is not in here gets
+# no corpus at all rather than someone else's — an unknown id is a bug, and the
+# safe failure for a bug is a tutor that says it was given nothing.
+#
+# The AP centres are listed with empty corpora on purpose: the directories do not
+# exist yet, and when they do their allow-lists are docs/learn/<centre>/*.md —
+# their own extracts, never this project's documents.
+def _course_allow(centre_id: str) -> list[str]:
+    """A course centre's corpus: its own directory's Markdown, and nothing else.
+
+    Deliberately narrow. These are the files that centre was built from — the
+    CED extract, the book inventory, the changes diff — so the tutor grounds on
+    the same syllabus the content did. It cannot reach the Surrey project's
+    documents, and the Surrey tutor cannot reach these.
+
+    ``content.js`` is not on the list. It is a megabyte of already-taught
+    material; grounding a tutor on the site's own answers would let it agree
+    with itself rather than with the syllabus.
+    """
+    d = DOCS / "learn" / centre_id
+    return [f"docs/learn/{centre_id}/{p.name}" for p in sorted(d.glob("*.md"))]
+
+
+COURSE_SYSTEM = """\
+You are a tutor for one Advanced Placement course. You have been given extracts
+from the College Board Course and Exam Description for that course, and nothing
+else.
+
+WHO YOU ARE TALKING TO
+A student preparing for the May 2027 exam. They are studying from a site built
+from the same document you have. Assume intelligence, not background.
+
+HOW TO ANSWER
+- Explain the mechanism, not just the fact. "Why is it true" beats "it is true".
+- Ground every claim in the material you were given, and say which file it came
+  from. Where the course description gives a topic or skill code, quote it.
+- If the answer is not in the material, say exactly that. Do not reason your way
+  to a plausible exam figure, weighting, rubric line or equation. A wrong number
+  here is worse than no number, because it will be believed and repeated.
+- Never state a rubric criterion, a point value, an exam timing or a question
+  count from memory. Those are the things students most need to be right, and
+  they change between years. Quote the extract or decline.
+- Prefer a short answer that lands over a long one that covers everything.
+
+NEVER SAY
+- That you are the College Board, or that this site is affiliated with it.
+- That a practice question here is a real exam question. Every question in this
+  centre is original.
+- Anything about what a specific exam will contain. The weightings are published
+  ranges, not promises.\
+"""
+
+CENTRES = {
+    "surrey": {
+        "allow": SURREY_ALLOW,
+        "system": SURREY_SYSTEM,
+        "spine": "docs/CORE_NARRATIVE.md",
+    },
+    "ap-physics-1": {
+        "allow": _course_allow("ap-physics-1"),
+        "system": COURSE_SYSTEM,
+        "spine": "docs/learn/ap-physics-1/CED_EXTRACT.md",
+    },
+    "ap-english-lang": {
+        "allow": _course_allow("ap-english-lang"),
+        "system": COURSE_SYSTEM,
+        "spine": "docs/learn/ap-english-lang/CED_EXTRACT.md",
+    },
+}
+
+
+def centre_of(body: dict) -> tuple[str, dict]:
+    """The requesting centre's config. Defaults to Surrey for older clients."""
+    cid = str(body.get("centre") or "surrey")
+    return cid, CENTRES.get(cid, {"allow": [], "system": "", "spine": None})
+
 
 # Where the key lives when the environment doesn't have it. Not every shell that
 # can launch this server has sourced your profile — Claude Code's Bash tool, for
@@ -164,9 +253,9 @@ def resolve_key() -> str:
     return ""
 
 
-def read_allowed(rel: str) -> str | None:
-    """Return the text of an allow-listed repo file, or None."""
-    if rel not in ALLOW:
+def read_allowed(rel: str, allow: list[str]) -> str | None:
+    """Return the text of a repo file on this centre's allow-list, or None."""
+    if rel not in allow:
         return None
     p = REPO / rel
     try:
@@ -176,7 +265,9 @@ def read_allowed(rel: str) -> str | None:
 
 
 def build_prompt(body: dict) -> str:
-    """Assemble the grounding block for one question."""
+    """Assemble the grounding block for one question, within one centre."""
+    _, centre = centre_of(body)
+    allow = centre["allow"]
     parts: list[str] = []
 
     concept = body.get("concept") or {}
@@ -189,25 +280,26 @@ def build_prompt(body: dict) -> str:
     src = concept.get("sourceDoc") or ""
     # sourceDoc is free text and sometimes names two files ("a.py · b.py").
     for token in [t.strip() for t in src.replace("·", " ").split() if t.strip()]:
-        text = read_allowed(token)
+        text = read_allowed(token, allow)
         if text:
             parts.append(f"SOURCE FILE — {token}\n\n{text}")
 
-    if not parts:
+    if not parts and centre["spine"]:
         # Asked from a page with no concept attached: give the spine instead.
-        spine = read_allowed("docs/CORE_NARRATIVE.md")
+        spine = read_allowed(centre["spine"], allow)
         if spine:
-            parts.append("PROJECT NARRATIVE — docs/CORE_NARRATIVE.md\n\n" + spine)
+            parts.append(f"PROJECT NARRATIVE — {centre['spine']}\n\n" + spine)
 
     index = body.get("index") or []
     if index:
         parts.append("EVERY CONCEPT IN THE STUDY GUIDE\n" + "\n".join("- " + str(t) for t in index))
 
-    parts.append("FILES YOU MAY ASK THE STUDENT TO OPEN\n" + "\n".join("- " + f for f in ALLOW))
+    if allow:
+        parts.append("FILES YOU MAY ASK THE STUDENT TO OPEN\n" + "\n".join("- " + f for f in allow))
     return "\n\n---\n\n".join(parts)
 
 
-def call_gemini(key: str, prompt: str, messages: list[dict]) -> str:
+def call_gemini(key: str, system: str, prompt: str, messages: list[dict]) -> str:
     contents = [
         {"role": "user", "parts": [{"text": "GROUNDING MATERIAL\n\n" + prompt}]},
         {"role": "model", "parts": [{"text": "Read. Ask me anything about it."}]},
@@ -217,7 +309,7 @@ def call_gemini(key: str, prompt: str, messages: list[dict]) -> str:
         contents.append({"role": role, "parts": [{"text": str(m.get("text", ""))}]})
 
     payload = {
-        "system_instruction": {"parts": [{"text": SYSTEM}]},
+        "system_instruction": {"parts": [{"text": system}]},
         "contents": contents,
         "generationConfig": {"temperature": 0.3, "maxOutputTokens": 2048},
     }
@@ -279,8 +371,18 @@ class Handler(SimpleHTTPRequestHandler):
             self._json(400, {"error": "Malformed request."})
             return
 
+        cid, centre = centre_of(body)
+        if not centre["allow"]:
+            self._json(503, {"error": (
+                f"No tutor corpus is configured for the '{cid}' centre, so there is "
+                "nothing to ground an answer on. Add its allow-list to CENTRES in "
+                "docs/learn/serve.py."
+            )})
+            return
+
         try:
-            answer = call_gemini(key, build_prompt(body), body.get("messages") or [])
+            answer = call_gemini(key, centre["system"], build_prompt(body),
+                                 body.get("messages") or [])
             self._json(200, {"answer": answer})
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", "replace")[:400]
@@ -307,10 +409,15 @@ def main() -> int:
         print("  The page will serve; the tutor will not answer.\n")
     where = "environment" if os.environ.get("GEMINI_API_KEY", "").strip() else str(KEYFILE)
     srv = ThreadingHTTPServer(("127.0.0.1", port), partial(Handler, directory=str(DOCS)))
-    print(f"Learning Centre   http://127.0.0.1:{port}/learn/")
+    print(f"Learning Centres  http://127.0.0.1:{port}/learn/")
+    for cid, cfg in CENTRES.items():
+        built = (Path(__file__).parent / cid / "index.html").exists()
+        corpus = f"{len(cfg['allow'])} files" if cfg["allow"] else "no corpus"
+        print(f"  {cid:<16}{'' if built else '(not built) '}"
+              f"http://127.0.0.1:{port}/learn/{cid}/  ·  {corpus}")
     print(f"model             {MODEL}")
     print(f"key               {'found in ' + where if key else 'MISSING'}")
-    print(f"corpus            {len(ALLOW)} files (docs/preprint and CLAUDE.md excluded)")
+    print("corpora           per centre; docs/preprint and CLAUDE.md excluded from all of them")
     print("Ctrl-C to stop.\n")
     try:
         srv.serve_forever()

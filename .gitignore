@@ -80,3 +80,19 @@ docs/deliverable/poster/
 docs/board/board.pdf
 docs/board/board_preview.png
 docs/board/board_detail_300dpi.png
+
+# Learning Centre ground-truth extracts. CED_EXTRACT.md is a verbatim extract of
+# a College Board Course and Exam Description — every learning objective and
+# essential knowledge statement for Physics, every scoring rubric row for English
+# — and BOOK_TOC.md inventories a copyrighted test-prep book. Both are necessary
+# on disk: they are the single retrieval every content-writing pass reads from,
+# and CHANGES_SINCE_2024.md is the diff between them. Neither belongs in a public
+# repository. The centres themselves carry original prose, plus rubric
+# descriptors quoted and attributed, which is a different and much smaller thing.
+docs/learn/*/CED_EXTRACT.md
+docs/learn/*/BOOK_TOC.md
+# CHANGES_SINCE_2024.md is a personal study aid, not a publication: to show that
+# the book's rubric has drifted it has to quote the book's rubric wording beside
+# the College Board's, so it carries verbatim text from both. Useful on disk,
+# wrong to publish. It rebuilds from the two files above.
+docs/learn/*/CHANGES_SINCE_2024.md
