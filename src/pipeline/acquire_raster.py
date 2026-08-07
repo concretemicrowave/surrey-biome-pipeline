@@ -331,6 +331,7 @@ def build_lst_composite(
     *,
     cloud_lt: float = 40.0,
     resolution: int = 30,
+    platforms: list[str] | None = None,
 ) -> xr.DataArray:
     """Cloud-masked mean summer land surface temperature (deg C) from Landsat C2 L2.
 
@@ -344,13 +345,14 @@ def build_lst_composite(
     """
     cat = pystac_client.Client.open(
         PROVIDERS["planetary-computer"].url, modifier=planetary_computer.sign_inplace)
+    plats = platforms or ["landsat-8", "landsat-9"]
     items = list(cat.search(
         collections=[LANDSAT_COLLECTION], bbox=bbox, datetime=f"{start}/{end}",
         query={"eo:cloud_cover": {"lt": cloud_lt},
-               "platform": {"in": ["landsat-8", "landsat-9"]}},
+               "platform": {"in": plats}},
     ).items())
-    logger.info("landsat-c2-l2: %d scenes (%s..%s, cloud<%.0f%%)",
-                len(items), start, end, cloud_lt)
+    logger.info("landsat-c2-l2: %d scenes (%s..%s, cloud<%.0f%%, %s)",
+                len(items), start, end, cloud_lt, "+".join(plats))
     if not items:
         raise RuntimeError(f"No Landsat scenes for {start}..{end}")
 
