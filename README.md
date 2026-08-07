@@ -1,7 +1,7 @@
 # surrey-biome-pipeline
 
 A controlled test of whether high-resolution **"scale-free" downscaled climate data**
-predicts polygon-scale water stress better than **coarse climate grids** — plus the
+predicts polygon-scale water stress better than **coarse climate grids**, plus the
 satellite monitoring index built after that approach was shown not to work.
 
 **It does not.** At a realistic 25 km regional-grid cell size, the *spatially
@@ -23,8 +23,8 @@ the two extents found.
 Two models are compared with **everything held constant except the spatial
 resolution of the climate predictors**:
 
-- **Model A** — ClimateBC values sampled at each polygon's own location and elevation (~375–750 m effective).
-- **Model B** — *those same values*, spatially averaged within coarse cells; each polygon takes its cell's value.
+- **Model A:** ClimateBC values sampled at each polygon's own location and elevation (~375–750 m effective).
+- **Model B:** *those same values*, spatially averaged within coarse cells; each polygon takes its cell's value.
 
 Deriving B by degrading A is the central design decision. Substituting a
 different coarse product would confound *which dataset* with *what resolution*,
@@ -36,10 +36,10 @@ The same experiment is run at two extents:
 
 | Extent | Units | Rows | Coarse cell | Outcome |
 |---|---|---|---|---|
-| **Surrey GIN** (application site) | 153 corridor polygons × 4 summers | 612 | 4 km | Unresolvable — the extent cannot test the hypothesis, and that is measurable |
-| **Fraser Valley transect** (test site) | 300 VRI forest stands × 4 summers | 1,200 | 25 km | Hypothesis reversed — the coarse model is better |
+| **Surrey GIN** (application site) | 153 corridor polygons × 4 summers | 612 | 4 km | Unresolvable: the extent cannot test the hypothesis, and that is measurable |
+| **Fraser Valley transect** (test site) | 300 VRI forest stands × 4 summers | 1,200 | 25 km | Hypothesis reversed: the coarse model is better |
 
-Surrey returned a null. Rather than read that as evidence against downscaling,
+Surrey returned a null. Instead of reading that as evidence against downscaling,
 the null was diagnosed: coarsening to 4 km removed only **12.3%** of the
 predictors' spatial variance, so Models A and B were very nearly the same model.
 Moving to a 100 km elevation transect (4–1,920 m) raised that to **48.4%**, which
@@ -55,34 +55,34 @@ a null result.
 | Quantity | Value |
 |---|---|
 | Paired ΔRMSE (RMSE_A − RMSE_B), transect @ 25 km | **+0.00093**, 95% CI [+0.00021, +0.00170] |
-| Model A R² (scale-free) @ 25 km | −0.138 — materially worse than predicting the mean |
-| Model B R² (coarse) @ 25 km | +0.003 — merely matches the mean |
+| Model A R² (scale-free) @ 25 km | −0.138, materially worse than predicting the mean |
+| Model B R² (coarse) @ 25 km | +0.003, merely matches the mean |
 | Paired interval excludes zero | 32 of 32 runs, across two cell sizes and independent seeds |
 | Stand CDEI vs climate gradient | Spearman \|ρ\| ≤ 0.15 (n = 300) |
 | Terrain + stand structure, CV R² | **+0.029** (positive in 80% of folds, against climate's 40%) |
 
-Neither model reached usable skill. The finding is about the **comparison** —
-fine-scale detail is an active hazard for this response while the coarse average
-is merely uninformative — not about either model being good.
+Neither model reached usable skill. The finding is about the **comparison**, in
+which fine-scale detail is an active hazard for this response while the coarse
+average is merely uninformative. It is not a finding that either model is good.
 
-### Two caveats that belong next to those numbers
+### Two caveats on those numbers
 
 The **paired difference** is what the conclusion rests on, and it is robust: it
 favours the coarse model at every cell size, seed and hyperparameter setting
 tested. The **categorical verdict label** is much less robust, in two ways that
 the reproduction commands below will show you directly.
 
-- **The label depends on the cell size.** The verdict rule requires
+- The label depends on the cell size. The verdict rule requires
   `max(R²_A, R²_B) > 0`, and Model B clears that by three thousandths at 25 km
   but misses it by three thousandths at 12 km. So `seed_sensitivity.py 25000 20`
   prints `FALSIFIED` 20 times and `seed_sensitivity.py 12000 12` prints
-  `INCONCLUSIVE` 12 times — while the paired ΔRMSE is +0.00093 and +0.00094
+  `INCONCLUSIVE` 12 times, while the paired ΔRMSE is +0.00093 and +0.00094
   respectively, statistically indistinguishable. The gate is a convenience
   threshold of my own construction, not a standard, and this is its weakest point.
-- **Significance depends on how hard the forest is allowed to overfit.** Across
+- Significance depends on how hard the forest is allowed to overfit. Across
   eight hyperparameter settings the coarse model is better on the point estimate
-  in all eight, but the paired interval excludes zero in only six — heavy
-  regularisation closes the gap to indistinguishability, because Model A's
+  in all eight, but the paired interval excludes zero in only six, because heavy
+  regularisation closes the gap to indistinguishability: Model A's
   deficit is substantially overfitting to fine climate detail.
 
 Both are reported in full in [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md).
@@ -104,8 +104,8 @@ water, with the fitted dry edge](docs/figures/cdei_feature_space.png)
 it. Everything plotted is measured, not illustrative. Regenerate with
 `python scripts/plot_cdei_feature_space.py`.*
 
-The name is deliberate. An earlier version of this work called the index TVWSI
-(Temperature–Vegetation Water Stress Index) — a name that already belongs to
+The rename was deliberate. An earlier version of this work called the index TVWSI
+(Temperature–Vegetation Water Stress Index), a name that already belongs to
 [Joshi et al. (2021)](https://doi.org/10.3390/rs13224635), and one that
 overstates what this index does, since its thermal term carries no
 between-polygon information (see below). The dry-edge construction is also not
@@ -155,7 +155,7 @@ docs/               # findings write-up and the applied deliverable
 docs/deliverable/   # the Surrey corridor stress map, ranking and caveats
 scripts/            # seed-sensitivity re-runs, progress monitor, figure plotting
 tests/
-data/               # gitignored — never committed; all of it is regenerable
+data/               # gitignored, never committed; all of it is regenerable
 ```
 
 ## Setup
@@ -182,7 +182,7 @@ python -m src.pipeline.prepare -v
 python -m src.pipeline.acquire_raster --mode optical  -v
 python -m src.pipeline.acquire_raster --mode thermal  -v
 
-# 3. Climate predictors — SLOW, see the note below
+# 3. Climate predictors (SLOW, see the note below)
 python -m src.pipeline.acquire_climate -v --calls-per-hour 46
 
 # 4. Build the panel, then run the test
@@ -242,7 +242,7 @@ Raw and intermediate data are not redistributed here.
 Phases 1–3b are complete: the experiment has been run at both extents, the
 explanatory analysis is done, and the applied index has been through independent
 validation. The manuscript is in preparation and has **not** been posted,
-submitted or peer reviewed — nothing here should be described as published. The
+submitted or peer reviewed; nothing here should be described as published. The
 Surrey corridor ranking is exploratory pending ground confirmation.
 
 ## Use of generative AI
