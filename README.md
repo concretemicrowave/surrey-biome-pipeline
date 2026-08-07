@@ -120,12 +120,14 @@ validation, not the geometry.
 
 **CDEI is a relative feature-space index, not a soil-moisture measurement**, and it
 has not been validated against any ground observation. Two findings from its own
-validation are load-bearing and are reported in full rather than buried:
+validation are load-bearing:
 
-1. **The between-corridor ranking is confounded with canopy density.** Sentinel-1
+1. **The between-corridor ranking has no independent confirmation.** Sentinel-1
    radar does not corroborate it as water stress, and correlating CDEI against NDVI
-   directly gives ρ = −0.35 (n = 153). The corridor map is **exploratory**, not a
-   restoration priority list.
+   directly gives ρ = −0.35 (n = 153), so the index is entangled with canopy
+   density. Ranking corridors by how dry they are for their own density does
+   reproduce the published order (ρ = +0.92), so density is not what orders it.
+   The corridor map is **exploratory**, not a restoration priority list.
 2. **The thermal term carries no between-polygon information.** Because it
    normalises each polygon against its own multi-summer mean, all between-polygon
    temperature variation divides out by construction. CDEI is numerically almost

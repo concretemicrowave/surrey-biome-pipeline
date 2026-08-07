@@ -61,9 +61,13 @@ STRESS_CMAP = "Reds"     # sequential: stress percentile, light -> dark
 POLY_EDGE = "#898781"
 CONTEXT = "#e1e0d9"   # un-emphasised "all corridors" outline beneath the data
 
+# "Entangled", not "confounded": the sharper charge -- that the ordering *is* a
+# canopy-density map -- was tested and refused to hold (Spearman rho = +0.924
+# after residualising against VH backscatter). What survives is the weaker and
+# accurate claim, which is the wording the manuscript uses throughout.
 EXPLORATORY_NOTE = (
-    "Exploratory: between-corridor ranking is confounded with canopy density, "
-    "not independently validated (see README)"
+    "Exploratory: ranking is entangled with canopy density though not ordered "
+    "by it; not independently validated (see README)"
 )
 
 
