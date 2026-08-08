@@ -61,6 +61,18 @@ docs/CORE_NARRATIVE.md
 docs/bilinear_interpolation.html
 docs/ml_pipeline_explorer.html
 
+# ---- Teaching material ----
+# Six ML labs that rebuild experiment.py in miniature on the real 612-row panel,
+# plus the grader they feed. They are study material, not part of the analysis:
+# nothing in src/, scripts/ or the paper imports them, and no result depends on
+# them. Their narrative half already lives in ../learning-centre/surrey/, so
+# keeping the notebooks here left a teaching apparatus split across two repos
+# and put coursework in a research compendium.
+#
+# They stay on disk and still run, because they import src.pipeline and read
+# data/processed/features.parquet and would break anywhere else.
+notebooks/labs/
+
 # ---- Manuscript ----
 # The paper is not published from this repository. It goes to a preprint
 # server; the README links the DOI once posted. Keeping a draft here would
