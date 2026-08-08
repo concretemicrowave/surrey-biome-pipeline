@@ -1,8 +1,8 @@
-# Phase 3 Findings — why the A-vs-B experiment is inconclusive at municipal scale
+# Phase 3 Findings: why the A-vs-B experiment is inconclusive at municipal scale
 
 > **Naming:** the response variable is **CDEI** (Canopy Dry-Edge Index). It was
 > called TVWSI in earlier drafts; that name belongs to Joshi et al. (2021),
-> *Remote Sensing* 13(22):4635. The dataframe column is still `tvwsi` — the
+> *Remote Sensing* 13(22):4635. The dataframe column is still `tvwsi`, and the
 > cached panels were built under the old name and renaming the field would
 > invalidate them. `tvwsi` the column and CDEI the index are the same quantity.
 
@@ -15,7 +15,7 @@ data cannot fix this".
 
 ## Headline
 
-**VERDICT: INCONCLUSIVE.** Not "downscaling doesn't help" — the experiment as
+**VERDICT: INCONCLUSIVE.** Not "downscaling doesn't help". The experiment as
 specified has nothing to measure at this study extent.
 
 ```
@@ -27,7 +27,7 @@ paired A-B mae       : +0.00018  95% CI [+0.00002, +0.00033]  A better in 28% of
 
 Two independent preconditions of the test both fail.
 
-## Precondition 1 — no model has predictive skill
+## Precondition 1: no model has predictive skill
 
 Every candidate target is at or below the no-skill line under spatially-blocked,
 corridor-grouped CV. This is **not** specific to CDEI, which rules out "we
@@ -41,7 +41,7 @@ picked the wrong index" as the explanation:
 | swci_mean | 0.0567 | −0.280 | −0.223 |
 | lst_mean | 3.0962 | −0.655 | −0.578 |
 
-## Precondition 2 — coarsening barely changes the predictors
+## Precondition 2: coarsening barely changes the predictors
 
 The 4 km upscale removes only ~12% of the predictors' spatial variance, so
 Models A and B are very nearly the *same model* and a null difference between
@@ -56,10 +56,10 @@ them is arithmetic rather than a finding.
 | 30 km | 3 | 85.6% |
 
 There is no escape inside Surrey: reaching meaningful contrast needs ~20 km
-cells, which leaves 4 cells across the entire study area — too few to spatially
+cells, which leaves 4 cells across the entire study area, too few to spatially
 block Model B.
 
-## Root cause — predictors and targets vary along orthogonal axes
+## Root cause: predictors and targets vary along orthogonal axes
 
 This single table explains every symptom above.
 
@@ -81,7 +81,7 @@ This single table explains every symptom above.
 
 **ClimateBC varies mostly in time. Corridor water stress varies mostly in
 space.** Spatially-blocked CV asks the model to rank corridors it has never
-seen — exactly the axis along which climate is nearly constant across a 30 km
+seen, exactly the axis along which climate is nearly constant across a 30 km
 municipality. Between-corridor differences in water stress are presumably driven
 by land cover, soil, canopy composition and irrigation, none of which are in the
 predictor set.
@@ -107,13 +107,13 @@ tvwsi_anom   train<2025 -> test 2025:  R2 = -1.673
 ```
 
 Catastrophically negative. **With four summers there is no defensible temporal
-claim either** — four points is not a time series. Do not cite the +0.051.
+claim either**. Four points is not a time series. Do not cite the +0.051.
 
 ## A structural point about the experimental design
 
 Even a working temporal model could not settle the resolution question. The
 upscale averages within *(cell, year)*, which preserves the temporal signal
-exactly — by design, so that only spatial detail is destroyed. On a purely
+exactly, by design, so that only spatial detail is destroyed. On a purely
 temporal target, Models A and B are therefore **identical by construction**.
 Resolution can only be tested on the spatial axis, which is precisely the axis
 where Surrey has almost no climate gradient.
@@ -132,7 +132,7 @@ Lowland terrain.
 
 ## What this implies
 
-The hypothesis contains a hidden premise — that meaningful climate variation
+The hypothesis contains a hidden premise: that meaningful climate variation
 exists *between corridors* to resolve. That premise is false at
 single-municipality scale. The finding is therefore methodological:
 
@@ -159,12 +159,12 @@ conclusion back to Surrey.
 
 ---
 
-# Phase 3b Findings — the transect makes the test measurable, and it falsifies the hypothesis
+# Phase 3b Findings: the transect makes the test measurable, and it falsifies the hypothesis
 
 Status: **FINAL**, computed on the complete Fraser Valley transect panel (1,200
 rows = 300 VRI stands x 4 summers) on 2026-07-24, after ClimateBC acquisition
 finished (1,500/1,500 jobs, 300/300 stands with a full 5-period panel). Same
-experiment, same code (`experiment.py`), same variables and folds — **only the
+experiment, same code (`experiment.py`), same variables and folds. **Only the
 study extent changed**, from Surrey's low-relief 30 km extent to a 100 km / 4–1,920 m
 south-of-Fraser elevation transect. Surrey stays the *application* site; the
 transect is where the method question can actually be asked.
@@ -172,7 +172,7 @@ transect is where the method question can actually be asked.
 ## Headline
 
 **VERDICT: FALSIFIED** (at a realistic 25 km regional-grid cell). Unlike Surrey,
-the test now has something to measure — and the answer is that scale-free climate
+the test now has something to measure, and the answer is that scale-free climate
 resolution does **not** help; the coarse grid is significantly *better*.
 
 > ⚠️ **Read this together with "Robustness of the FALSIFIED verdict" below.** The
@@ -188,10 +188,10 @@ paired A-B r2   : -0.14127  95% CI [-0.25660, -0.04149]  A better in 40% of fold
 ```
 
 Both CIs exclude zero: the fine-scale spatial detail in scale-free ClimateBC is
-not merely unhelpful, it is **anti-informative** for stand water stress — noise
+not merely unhelpful, it is **anti-informative** for stand water stress: noise
 the coarse average smooths away.
 
-## Precondition 2 now PASSES — the extent is big enough to blur
+## Precondition 2 now PASSES: the extent is big enough to blur
 
 This is the half Surrey structurally failed. Over the transect, coarsening the
 grid removes a large and growing share of the predictors' spatial variance, so
@@ -205,23 +205,23 @@ real rather than arithmetic:
 | 12 km | 23 | 34.4% | inconclusive |
 | 25 km | 10 | 48.4% (leading predictors 58–68%) | **falsified** |
 
-At 25 km — a faithful stand-in for the grid resolution of the regional climate
-models the hypothesis set out to beat — the median predictor loses ~half its
+At 25 km, a faithful stand-in for the grid resolution of the regional climate
+models the hypothesis set out to beat, the median predictor loses ~half its
 spatial variance and the leading ones (Eref, Tmax, CMD) lose two-thirds, while
 10 cells still leave enough geographic spread to spatially block Model B.
 
-## Precondition 1 still FAILS — but now for a diagnosable reason
+## Precondition 1 still FAILS, but now for a diagnosable reason
 
 No climate resolution has spatial skill: Model A's spatially-blocked CV R² is
 **−0.138**, worse than predicting the mean. The reason is visible directly in the
-data, and it is *not* Surrey's orthogonal-axes problem — here the target varies
+data, and it is *not* Surrey's orthogonal-axes problem: here the target varies
 strongly in space:
 
 | quantity | between-stand sd | between-year sd | ratio |
 |---|---|---|---|
 | CDEI | 0.0241 | 0.0022 | **122× spatial** |
 
-CDEI varies 122× more between stands than between years — the exact *inverse* of
+CDEI varies 122× more between stands than between years, the exact *inverse* of
 Surrey, where the target was mostly temporal. So there is a strong spatial signal
 to predict. The climate gradient simply does not align with it:
 
@@ -237,7 +237,7 @@ what organizes between-stand water stress.
 ## What DOES drive between-stand water stress
 
 The follow-up analysis (`explain.py`, same blocked CV) compares predictor
-families against CDEI. RS bands (NDVI/SWCI/LST) are excluded as predictors —
+families against CDEI. RS bands (NDVI/SWCI/LST) are excluded as predictors,
 CDEI is built from them, so they would be circular.
 
 | predictor family | n | CV R² | folds R²>0 |
@@ -253,15 +253,15 @@ Terrain + stand structure is the only family that crosses into positive skill
 makes it *worse* (+0.029 → +0.020), confirming the climate gradient is noise for
 this target. The leading drivers, by permutation importance on a held-out spatial
 block, are **local**: leading species (bigleaf maple), stand area, aspect
-(eastness then northness) and broadleaf class — no climate variable appears.
+(eastness then northness) and broadleaf class. No climate variable appears.
 
-## Robustness of the FALSIFIED verdict — and one qualification it does not survive
+## Robustness of the FALSIFIED verdict, and one qualification it does not survive
 
 Two follow-up analyses were run after the headline above was first written. The
 first strengthens the result; the second genuinely weakens it, and the weaker
 claim is the one the evidence supports.
 
-**Seed sensitivity — the margin is not noise.** Model B clears the skill gate by
+**Seed sensitivity: the margin is not noise.** Model B clears the skill gate by
 about three thousandths, which invites the objection that `R² = +0.003` is an
 artifact of which random partition the k-means blocking happened to draw. The
 whole experiment was re-run across independent seeds, re-seeding both the spatial
@@ -277,11 +277,11 @@ draw, and the paired difference excludes zero in **32 of 32 runs** across both c
 sizes. Note what this does *not* rescue: +0.003 is a stable measurement, not a
 meaningful amount of skill.
 
-**Hyperparameter sensitivity — statistical significance is NOT stable.** The forest
+**Hyperparameter sensitivity: statistical significance is NOT stable.** The forest
 settings were fixed a priori and never tuned, so the experiment was re-run at 25 km
 across eight configurations (`data/processed/hp_sensitivity_phase3b.csv`). Model B
 is better on the point estimate in **all eight**, and R²_B never leaves
-[+0.001, +0.004] — but the paired interval **excludes zero in only six of eight**:
+[+0.001, +0.004], but the paired interval **excludes zero in only six of eight**:
 
 | trees | leaf | max_features | R²_A | R²_B | paired ΔRMSE (95% CI) | verdict |
 |---|---|---|---|---|---|---|
@@ -297,7 +297,7 @@ is better on the point estimate in **all eight**, and R²_B never leaves
 R²_A climbs monotonically from −0.249 to −0.060 as leaf size grows while R²_B does
 not move: Model A's deficit is substantially **overfitting to fine-grained climate
 detail**, and constraining the forest suppresses it. That is mechanistically the
-same claim this document makes — but it means the *significance* of the gap depends
+same claim this document makes, but it means the *significance* of the gap depends
 on how hard the learner is allowed to chase that detail.
 
 **So the defensible statement is weaker than the headline above.** The coarse model
@@ -319,37 +319,37 @@ artifact in a way the underlying evidence is not.
 ## Two honesty flags
 
 1. **The explanatory signal is weak.** Best CV R² ≈ +0.03–0.04. This is a
-   *directional* result — "the driver is local stand attributes, not the climate
-   gradient" — not a strong predictive model. Most between-stand CDEI variance
+   *directional* result, "the driver is local stand attributes, not the climate
+   gradient", not a strong predictive model. Most between-stand CDEI variance
    remains unexplained by anything measured (aspect and species help; soil depth,
    rooting, groundwater and management are absent from the feature set).
 2. **Part of that explanation may be a vegetation-type artifact.** Leading-species
    and broadleaf/conifer class ranking highest is consistent with CDEI partly
-   encoding canopy *type* — broadleaf and conifer stands occupy different regions
-   of the NDVI–SWCI–LST feature space CDEI is constructed in — rather than water
+   encoding canopy *type* (broadleaf and conifer stands occupy different regions
+   of the NDVI–SWCI–LST feature space CDEI is constructed in) rather than water
    stress per se. Worth carrying into any downstream claim.
 
 ## What this implies
 
 Surrey could not test the hypothesis (predictor and target varied on different
-axes — space vs time). The transect **can**, and the result is unambiguous in
+axes: space vs time). The transect **can**, and the result is unambiguous in
 direction:
 
 > **Where a real spatial climate gradient exists, scale-free downscaled climate
-> still does not beat coarse grid climate for corridor/stand water stress — the
-> coarse grid is if anything better — because water stress at this scale is
+> still does not beat coarse grid climate for corridor/stand water stress, and the
+> coarse grid is if anything better, because water stress at this scale is
 > governed by local terrain aspect and stand composition, not by the macroclimate
 > gradient that downscaling resolves.**
 
 For the Surrey Green Infrastructure application this sharpens the earlier
 conclusion: the monitoring asset is *which corridors are stressed and why*, and
-the "why" is local (aspect, canopy composition, stand structure) — not something
+the "why" is local (aspect, canopy composition, stand structure), not something
 a finer climate product would surface. Climate resolution is the wrong lever;
 the RS-derived stress index and local stand/terrain context are the right ones.
 
 ## Code added
 
-* `src/pipeline/explain.py` — derives per-stand terrain (slope, aspect as
+* `src/pipeline/explain.py`: derives per-stand terrain (slope, aspect as
   northness/eastness, ruggedness, elevation) from the Copernicus GLO-30 DEM and
   scores predictor families under the experiment's own blocked CV. CLI:
   `python -m src.pipeline.explain -v` (add `--build-terrain` to re-derive from

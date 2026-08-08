@@ -1,4 +1,4 @@
-# Field sheet — Surrey corridor soil moisture
+# Field sheet: Surrey corridor soil moisture
 
 **Blinded.** Visit sites in the order given. Nothing on this sheet says which
 site the index expects to be drier, which sites are paired, or which corridor

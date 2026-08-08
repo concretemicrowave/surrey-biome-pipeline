@@ -9,7 +9,7 @@ corridors are long, narrow and small (median effective width 49.4 m, median
 area 7.3 ha). Any step that resamples them onto a raster grid destroys the thing
 being measured. So every module either produces per-polygon values or reduces a
 raster to them, and the coarse cells in the resolution experiment exist only as
-a device for degrading predictors — no quantity is ever computed for a cell, and
+a device for degrading predictors. No quantity is ever computed for a cell, and
 no cell is ever a row.
 
 ---
@@ -42,7 +42,7 @@ acquire_vri ─────┘                              └─> acquire_clim
 | `acquire_vri` | BC VRI treed stands over the Fraser Valley transect, stratified sample |
 | `prepare` | Normalise dirty corridor attributes; derive the study extent |
 | `acquire_raster` | Sentinel-2 optical + Landsat thermal composites via STAC |
-| `acquire_climate` | ClimateBC point queries — rate-limited, resumable, disk-cached |
+| `acquire_climate` | ClimateBC point queries (rate-limited, resumable, disk-cached) |
 | `align` | CRS assertion + inward-buffer edge decontamination (Surrey only) |
 | `zonal` | Coverage-weighted raster → polygon reduction via `exactextract` |
 | `assemble` | Build the CDEI target, join climate, write the panel |
@@ -61,7 +61,7 @@ acquire_vri ─────┘                              └─> acquire_clim
 | CRS | `pyproj` | Authoritative PROJ transforms, incl. NAD83↔WGS84 datum shifts |
 | Raster | `rasterio` + `rioxarray` over `xarray` | Labelled, CRS-aware arrays with `.rio.reproject()` / `.rio.clip()` |
 | STAC | `pystac-client` + `odc-stac` + `planetary-computer` | Query, then load matched items straight into a lazy dask-backed `xarray` |
-| Zonal | `exactextract` | **Exact** pixel-fraction weighting — see §5 |
+| Zonal | `exactextract` | **Exact** pixel-fraction weighting (see §5) |
 | ML | `scikit-learn` | Random forest + the CV machinery the experiment reuses |
 | Env | `uv` | No conda needed; modern wheels bundle GDAL |
 
@@ -87,11 +87,11 @@ caps results per request, so `acquire_vector` pages with
 The transect units are a harder problem, and `acquire_vri` documents the
 decision: BC VRI treed stands are sampled 300 of 12,168 over a box capped at
 49.20° N, stratified by BEC zone × easting quintile with sqrt-proportional
-allocation. The latitude cap matters — without it the box reaches the North
+allocation. The latitude cap matters: without it the box reaches the North
 Shore mountains and stops being a transect. Protected areas were evaluated as
 an alternative unit and rejected (only 11–19 polygons, spanning 3 to 61,594 ha).
 
-### 4.2 Raster — two providers, and a radiometric trap
+### 4.2 Raster: two providers, and a radiometric trap
 
 `acquire_raster` supports **two independent STAC catalogues**, Element84 Earth
 Search (default, no auth) and Microsoft Planetary Computer (anonymous token
@@ -101,12 +101,12 @@ build, and a single-provider pipeline would have stopped.
 
 The radiometric handling is the part worth reading. Sentinel-2 processing
 baseline ≥ 04.00 stores a −1000 DN bottom-of-atmosphere offset. NDVI is a ratio,
-but an *additive* offset does not cancel, so it must be removed — and it must
+but an *additive* offset does not cancel, so it must be removed, and it must
 not be removed twice. Element84 items already have it removed at source.
 Subtracting it again drives red reflectance negative, where a `clip(min=0)`
 guard pins it at 0 and NDVI becomes exactly 1.0. **That is what produced Phase
 2's apparent "NDVI saturation" in 87% of corridors: an artifact, not a canopy
-signal.** The vendor metadata flag cannot be trusted either — 2022 scenes marked
+signal.** The vendor metadata flag cannot be trusted either: 2022 scenes marked
 `boa_offset_applied: False` carry the same DN magnitudes as ones marked `True`.
 So `boa_offset_per_time` **measures** the offset from each scene's own dark
 pixels, applies it along the time axis, and logs any disagreement with the
@@ -115,7 +115,7 @@ metadata. Over both study extents it measures as 0 DN.
 Composites are per-summer (1 June – 31 August), per-pixel median for optical and
 mean for thermal.
 
-### 4.3 Climate — the pipeline's real bottleneck
+### 4.3 Climate: the pipeline's real bottleneck
 
 ClimateBC exposes a live point-query endpoint, `LatLonEl` on `api6.climatebc.ca`,
 returning every predictor for one (lat, lon, elevation) triple in ~0.3 s. It is
@@ -128,7 +128,7 @@ mode.** That constraint shapes the module more than anything else in the repo:
 - checkpointing every 10 jobs, so an interrupted run resumes.
 
 A full Surrey pass is 153 corridors × 5 periods = 765 calls ≈ 16 h; the transect
-is 1,500 calls ≈ 33 h. Parallelism cannot help — the limit is per-IP. Elevation
+is 1,500 calls ≈ 33 h. Parallelism cannot help: the limit is per-IP. Elevation
 comes from a real Copernicus GLO-30 DEM rather than being assumed constant,
 because elevation is precisely what makes ClimateBC scale-free and is therefore
 the whole mechanism under test.
@@ -139,11 +139,11 @@ Two decisions, both driven by corridor shape.
 
 **Inward buffer (`align`, Surrey only).** Pixels straddling a corridor edge
 blend canopy with road, lawn and roof. Each corridor is buffered inward by
-**5 m** — a fraction of a pixel, not a whole one, because a full 10 m buffer
+**5 m**, a fraction of a pixel, not a whole one, because a full 10 m buffer
 would erase the narrowest corridors outright. Where the buffer still collapses a
 polygon, the original geometry is retained and the row flagged `too_thin`; this
 happens to exactly **1 of 153** corridors. The buffer costs 16.5% of total
-corridor area and moves median effective width from 49.4 m to 39.7 m — so every
+corridor area and moves median effective width from 49.4 m to 39.7 m, so every
 Surrey dimension quoted in this project describes the buffered analysis
 geometry.
 
@@ -159,8 +159,8 @@ minority of Surrey corridors.
 
 `zonal_bands` generalises this to any raster at any pixel size, so one function
 serves the 10 m Phase 2 NDVI composite, the 20 m optical composite and the 30 m
-Landsat LST. `coverage_frac` is recomputed from the actual pixel area each time
-— a 30 m pixel is 9× the area of a 10 m one, and reusing a constant would
+Landsat LST. `coverage_frac` is recomputed from the actual pixel area each time.
+A 30 m pixel is 9× the area of a 10 m one, and reusing a constant would
 silently understate thermal coverage by that factor.
 
 > **A diagnostic that does not do what its name suggests.** `coverage_frac`
@@ -170,8 +170,8 @@ silently understate thermal coverage by that factor.
 > cited as evidence against the mixed-pixel problem, and the preprint's
 > Limitations say so explicitly.
 
-Join key: the source `id` field is **not** unique (153 polygons share 144 ids —
-several corridors are split into parts), so `objectid` is what every table joins
+Join key: the source `id` field is **not** unique (153 polygons share 144 ids,
+because several corridors are split into parts), so `objectid` is what every table joins
 on.
 
 ## 6. The target: CDEI
@@ -202,11 +202,11 @@ rather than implementation details:
 ## 7. The experiment
 
 `experiment.py` holds everything constant except the spatial resolution of the
-climate predictors — same target, same polygons, same summers, same learner,
+climate predictors: same target, same polygons, same summers, same learner,
 same feature list, same folds, same seeds.
 
-- **Model A** — ClimateBC sampled at each polygon's own location and elevation.
-- **Model B** — *those same values*, averaged within coarse cells; each polygon
+- **Model A:** ClimateBC sampled at each polygon's own location and elevation.
+- **Model B:** *those same values*, averaged within coarse cells; each polygon
   takes its cell's value. Deriving B by degrading A is the central design
   decision: substituting a different coarse product would confound *which
   dataset* with *what resolution*, and only resolution is under test.
@@ -226,7 +226,7 @@ remote-sensing-derived.
 
 `verdict()` requires two gates: a **contrast** gate (the coarsening must remove
 a materially large share of predictor spatial variance) and a **skill** gate,
-`MIN_SKILL_R2 = 0.0` — below which a model is no better than predicting the
+`MIN_SKILL_R2 = 0.0`, below which a model is no better than predicting the
 mean and there is nothing to compare.
 
 That second constant is a convenience threshold, not a standard from the
@@ -234,7 +234,7 @@ literature, and it is the least defensible thing in this module. Model B clears
 it by three thousandths at a 25 km cell and misses it by three thousandths at
 12 km, flipping the categorical label while the paired difference is unchanged.
 `upscaling_diagnostics()` exists to run the contrast gate *before* drawing any
-conclusion — it is what diagnosed Surrey's null as untestable rather than
+conclusion: it is what diagnosed Surrey's null as untestable rather than
 negative. A rule stated in terms of the paired interval alone would be more
 robust and is the recommended form for reuse.
 

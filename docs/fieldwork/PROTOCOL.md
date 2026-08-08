@@ -1,4 +1,4 @@
-# Field protocol — does the corridor ranking track soil water?
+# Field protocol: does the corridor ranking track soil water?
 
 Read this before the first visit. The design is in `scripts/field_design.py`,
 which explains why each constraint is where it is; this file is how to execute it.
@@ -25,8 +25,8 @@ That is not the same as showing the ranking corresponds to water at all. This is
 **The design.** 12 pairs of corridors, matched on canopy density (VH backscatter
 within 0.002, about a quarter of a standard deviation) and on proximity (within
 5 km), but far apart on the stress ranking (62 to 111 ranks apart, out of 131).
-Within a pair, **(C) predicts no systematic soil-moisture difference** — the two
-have the same density — while **(W) predicts the high-stress member is drier**.
+Within a pair, **(C) predicts no systematic soil-moisture difference** (the two
+have the same density) while **(W) predicts the high-stress member is drier**.
 The pair is the unit of analysis and the *direction* of its difference is the
 datum, so nothing depends on the probe or balance being absolutely accurate.
 
@@ -34,7 +34,7 @@ Matching on proximity is doing real work, not just saving driving: soil texture,
 parent material and last-rain timing are exactly the nuisance variables a paired
 design exists to remove, and they vary over kilometres in Surrey.
 
-## Timing — the part that cannot be fixed later
+## Timing: the part that cannot be fixed later
 
 - **At least 72 h since measurable rain.** Soil moisture contrast between sites
   collapses after rain; measuring two days after a storm produces a null that
@@ -42,7 +42,7 @@ design exists to remove, and they vary over kilometres in Surrey.
 - **Late August into September is the window.** Contrast peaks at the end of the
   summer dry-down. Every week earlier is a weaker signal.
 - **Both members of a pair in the same outing**, with no rain between them. The
-  sheet orders sites so pair members are consecutive — do not reorder it.
+  sheet orders sites so pair members are consecutive. Do not reorder it.
 - Avoid the first hot afternoon after a cool spell; surface soil is still
   equilibrating.
 
@@ -71,13 +71,13 @@ unimpeachable. The cost is labour, not money.
 2. Stay **at least 10 m from any edge, path, or road** wherever the corridor
    allows it. If it does not, get as far in as you safely can and **write down
    the distance you achieved**. That number goes into the analysis.
-3. Clear surface litter — leaves, moss, duff — but do not dig out topsoil.
+3. Clear surface litter (leaves, moss, duff) but do not dig out topsoil.
 4. Take **three cores at 10 cm depth**, spaced roughly 5 m apart in a triangle.
    Same depth every time; mark the trowel or corer at 10 cm with tape.
 5. Each core goes straight into its own labelled zip bag, sealed immediately.
    Evaporation between the corridor and the car is a real error source.
 6. Record aspect, slope, canopy overhead, soil texture by feel, and anything
-   unusual — irrigation, standing water, recent disturbance. Phase 3b found water
+   unusual: irrigation, standing water, recent disturbance. Phase 3b found water
    stress is driven by local aspect and stand composition, so aspect is a known
    driver and not an afterthought.
 7. Photograph the site. Useful for the board, and it settles later questions
@@ -85,7 +85,7 @@ unimpeachable. The cost is labour, not money.
 
 **At the bench,** same day: weigh each bagged sample wet. Then dry at 105 °C for
 24 h in a foil tin, cool in a closed container so it does not reabsorb humidity,
-and weigh again. Use the same balance throughout — drift cancels in a paired
+and weigh again. Use the same balance throughout, since drift cancels in a paired
 design only if it is the same instrument.
 
 If you also own a capacitive probe, take five readings per site and write them in
@@ -103,7 +103,7 @@ worth more than a fudged one:
 - one member irrigated, or with standing water
 - a site moved more than ~50 m from the given coordinates
 
-Three **reserve pairs** are on the sheet. Use one **as a whole pair** — never
+Three **reserve pairs** are on the sheet. Use one **as a whole pair**, never
 substitute a single member, because that breaks the density match that makes the
 comparison mean anything.
 
@@ -113,7 +113,7 @@ Corridors are a mix of City land, park, road allowance and private property; the
 GIN designation is a planning overlay and **is not permission to enter**. Check
 each site before the trip. Surrey Parks can confirm which are public greenway.
 Where a corridor crosses private land, either get the owner's permission or drop
-the site to a reserve — do not improvise.
+the site to a reserve. Do not improvise.
 
 Practical: tell someone the route, go with an adult, wear boots and long
 trousers, and expect blackberry. Do not enter creek beds or steep banks. Some
@@ -125,11 +125,11 @@ it needs the corridor identities the field sheet deliberately withholds.
 
 ## Blinding
 
-`field_sheet.md` and `sites.geojson` carry site codes and coordinates only — no
+`field_sheet.md` and `sites.geojson` carry site codes and coordinates only, no
 corridor id, no rank, no CDEI, no pair membership, and reserve codes use A/B
 rather than anything that encodes the prediction. `field_design.csv` is the key.
 
-**Give the key to someone else** — a parent or teacher — until every mass is
+**Give the key to someone else**, a parent or teacher, until every mass is
 recorded. Unblind only to do the analysis.
 
 This is imperfect and the write-up should say so: the author built the ranking
@@ -156,7 +156,7 @@ they are mostly negative. Two-sided exact **sign test** on 12 pairs:
 So **10 of 12 in the predicted direction is the smallest significant result.**
 
 **Secondary.** Wilcoxon signed-rank on the paired differences, and the Spearman
-correlation between pair rank-separation and difference magnitude — if the
+correlation between pair rank-separation and difference magnitude. If the
 ranking is real, pairs further apart should differ more. Both are supporting, not
 decisive: gravimetric values carry soil-texture offsets that the sign discards
 and a magnitude test does not.
@@ -165,7 +165,7 @@ and a magnitude test does not.
 within pair (VH is only a partial density proxy, ρ ≈ 0.55, so the match is
 partial), aspect, achieved edge distance, and dry days at measurement.
 
-## Power — and the asymmetry that matters
+## Power, and the asymmetry that matters
 
 | | true concordance 0.7 | 0.8 | 0.9 |
 |---|---|---|---|
@@ -175,7 +175,7 @@ partial), aspect, achieved edge distance, and dry days at measurement.
 **Read this honestly: the design can confirm, but is weakly powered to refute.**
 A strong effect will be caught nearly nine times in ten. A moderate one is a coin
 flip. So a significant result is real evidence that the ranking tracks water,
-while a null result at n = 12 is **not** strong evidence that it does not — it is
+while a null result at n = 12 is **not** strong evidence that it does not. It is
 consistent with a moderate effect the design was too small to see.
 
 That asymmetry has to be stated in whatever gets written, and it is the reason to

@@ -24,7 +24,7 @@ resolve on their own, so it does not matter which directory you start from.
 | 6 | `lab6_is_it_real.ipynb` | `paired_bootstrap`, `excludes_zero` | ΔRMSE −0.00004, CI [−0.00016, +0.00007], and why that is INCONCLUSIVE. |
 
 Lab 6 calls the real `experiment.py` for the model run and reproduces the
-preprint's headline interval to the digit — `ex.paired_difference` and your own
+preprint's headline interval to the digit: `ex.paired_difference` and your own
 bootstrap should agree exactly.
 
 ## Requirements
@@ -43,7 +43,7 @@ they are tight enough that a function returning a constant does not.
 
 The receipt is `LAB{n}-{passed}o{total}-{fnv1a}`. The Learning Centre recomputes
 the same FNV-1a hash and rejects an edited code. That stops a mistyped paste, not
-a determined student — the salt is in this directory and you can read it. The
+a determined student, since the salt is in this directory and you can read it. The
 verification is a convenience; the honesty is yours.
 
 A note on naming that trips people up: the target column is `tvwsi` in the
