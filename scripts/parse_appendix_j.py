@@ -19,14 +19,16 @@ attributes against this table is what proves which column is which: joined on
 are digitised as several parts. That is why the polygon count and the corridor
 count differ, and why a top-20 polygon ranking can list one corridor twice.
 
-⚠ **The parent document is disputed with the manuscript.** This docstring says
-BCS and the downloaded PDF agrees — its 11 pages run "BCS • Spring 2014" over
-pages 119-129, which is what ``FURNITURE`` below matches on. But §1.1 of the
-preprint, and the verified note above ``@techreport{surreyEMS}`` in
-``references.bib``, both attribute Appendix J to the 2011 Ecosystem Management
-Study instead. Unresolved as of 2026-08-02; see ``docs/preprint/KNOWN_ISSUES.md``
-item S2. Nothing this script computes depends on the answer — it parses the file
-at ``URL`` either way — but the citation in the paper does.
+**The parent document is the BCS. Settled 2026-08-07.** This docstring and the
+downloaded PDF always agreed — its 11 pages run "BCS • Spring 2014" over pages
+119-129, which is what ``FURNITURE`` below matches on — while §1.1 of the
+preprint and the note above ``@techreport{surreyEMS}`` in ``references.bib``
+attributed Appendix J to the 2011 Ecosystem Management Study. The EMS was opened
+and checked: 79 pages, contents reading "APPENDICES (see Book 2)" and listing
+A-D only, no occurrence of "Appendix J" and none of "144". Parsing pages 119-129
+out of the full Biodiversity Conservation Strategy report with the ``ROW``
+pattern below returns the same 144 corridors, identical on all four attributes.
+The manuscript and the bib note are corrected; see ``KNOWN_ISSUES.md`` item S2.
 
     .venv/bin/python scripts/parse_appendix_j.py -v
 """
