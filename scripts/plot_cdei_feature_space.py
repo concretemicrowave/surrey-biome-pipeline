@@ -213,6 +213,82 @@ def main(out: Path = OUT, *, standalone: bool = True, mode: str = "paper") -> No
     print(f"  rows {len(df)}  years {years}")
 
 
+def panel(which: str, out: Path, *, mode: str = "paper") -> None:
+    """Render ONE half of the combined figure, standalone.
+
+    The two-paper split needs the halves separately: the construction panel
+    belongs to the monitor paper and the summer-by-summer small multiples --- a
+    first visual of the orthogonality problem --- to the resolution paper.
+    Reprinting the whole figure in both would be a permissions problem once
+    either is published.
+
+    Deliberately NOT implemented by parameterising ``main()``. That layout
+    positions three header blocks in *figure* coordinates against a GridSpec
+    with hand-set margins, so dropping a row slides the annotations into each
+    other. These are separate, simpler layouts; ``main()`` is untouched.
+    """
+    viz.set_mode(mode)
+    df = pd.read_parquet(paths.FEATURES)
+    a = float(df["dry_edge_a"].iloc[0])
+    b = float(df["dry_edge_b"].iloc[0])
+    xs = np.linspace(0.20, 0.95, 100)
+    lo_x, hi_x, lo_y, hi_y = 0.20, 0.95, 0.08, 0.47
+
+    if which == "construction":
+        fig, ax = plt.subplots(figsize=(8.4, 5.6), facecolor=SURFACE, dpi=200)
+        _style(ax)
+        ax.set_xlim(lo_x, hi_x)
+        ax.set_ylim(lo_y, hi_y)
+        ax.scatter(df["ndvi_mean"], df["swci_mean"], s=26, c=SERIES, alpha=0.55,
+                   linewidths=0.4, edgecolors=SURFACE, zorder=3)
+        ax.plot(xs, a + b * xs, color=EDGE, linewidth=2.0, zorder=4)
+        ax.fill_between(xs, a + b * xs, lo_y, color=EDGE, alpha=0.05, zorder=1)
+        ax.annotate(f"dry edge   SWCI = {a:.3f} + {b:.3f} × NDVI\n"
+                    "the driest observed, for a given greenness",
+                    xy=(0.62, a + b * 0.62), xytext=(0.415, 0.103),
+                    color=EDGE, fontsize=10.5, fontweight="bold",
+                    ha="left", va="center",
+                    arrowprops=dict(arrowstyle="-", color=EDGE, linewidth=1.0,
+                                    shrinkA=6, shrinkB=4, alpha=0.75))
+        ax.set_xlabel("NDVI   →  greener", color=INK_2, fontsize=10.5, labelpad=8)
+        ax.set_ylabel("SWCI   →  more canopy water", color=INK_2, fontsize=10.5,
+                      labelpad=8)
+    elif which == "orthogonality":
+        years = sorted(df["year"].unique())
+        fig, axes = plt.subplots(1, len(years), figsize=(9.6, 3.3),
+                                 facecolor=SURFACE, dpi=200)
+        for i, (axs, yr) in enumerate(zip(axes, years)):
+            _style(axs)
+            g = df[df["year"] == yr]
+            axs.plot(xs, a + b * xs, color=EDGE, linewidth=1.4, zorder=4)
+            axs.scatter(g["ndvi_mean"], g["swci_mean"], s=11, c=SERIES,
+                        alpha=0.6, linewidths=0.0, zorder=3)
+            axs.set_xlim(lo_x, hi_x)
+            axs.set_ylim(lo_y, hi_y)
+            axs.set_title(f"{int(yr)}", color=INK, fontsize=11,
+                          fontweight="bold", pad=6)
+            # Two lines, not one: on a standalone strip the single-line form is
+            # wider than the panel and the neighbouring labels collide.
+            axs.text(0.5, -0.40,
+                     f"CMD {g['CMD_sm'].mean():.0f}\n"
+                     f"median dry_dist {g['dry_dist'].median():.3f}",
+                     transform=axs.transAxes, color=MUTED, fontsize=8.5,
+                     ha="center", va="top", linespacing=1.5)
+            axs.set_xlabel("NDVI", color=INK_2, fontsize=9.5, labelpad=4)
+            if i:
+                axs.set_yticklabels([])
+            else:
+                axs.set_ylabel("SWCI", color=INK_2, fontsize=9.5, labelpad=6)
+        fig.subplots_adjust(bottom=0.34, wspace=0.16)
+    else:
+        raise ValueError(f"unknown panel: {which}")
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, facecolor=SURFACE, bbox_inches="tight", pad_inches=0.24,
+                dpi=viz.save_dpi())
+    print(f"wrote {out}  ({which}, {viz.save_dpi()} dpi)")
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -221,7 +297,12 @@ if __name__ == "__main__":
     p.add_argument("--no-title", action="store_true",
                    help="omit the baked-in title, for the manuscript where a "
                         "LaTeX caption already carries it")
+    p.add_argument("--panel", choices=("construction", "orthogonality"),
+                   help="render only one half, for the two-paper split")
     p.add_argument("--mode", choices=viz.MODES, default="paper",
                    help="'poster' raises print resolution to 600 dpi; default 'paper'")
     a = p.parse_args()
-    main(a.out, standalone=not a.no_title, mode=a.mode)
+    if a.panel:
+        panel(a.panel, a.out, mode=a.mode)
+    else:
+        main(a.out, standalone=not a.no_title, mode=a.mode)
