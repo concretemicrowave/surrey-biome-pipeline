@@ -11,8 +11,8 @@ rather than signal. Water stress at this scale is organised by local terrain and
 stand composition, not by the macroclimate gradient.
 
 This repository is the code, method and applied output. The full write-up is a
-manuscript in preparation for a preprint server; **it has not been posted, submitted
-or peer reviewed**, and this README will link its DOI once it is. Until then,
+manuscript in preparation for a preprint server. **It has not been posted,
+submitted or peer reviewed**, and this README will link its DOI once it is. Until then,
 [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md) is the detailed account of what
 the two extents found.
 
@@ -26,9 +26,9 @@ resolution of the climate predictors**:
 - **Model A:** ClimateBC values sampled at each polygon's own location and elevation (~375–750 m effective).
 - **Model B:** *those same values*, spatially averaged within coarse cells; each polygon takes its cell's value.
 
-Deriving B by degrading A is the central design decision. Substituting a
-different coarse product would confound *which dataset* with *what resolution*,
-and only resolution is under test. Both are random forests scored under
+Deriving B by degrading A rather than substituting a different coarse product is
+the central design decision: otherwise the comparison would confound *which
+dataset* with *what resolution*, and only resolution is under test. Both are random forests scored under
 repeated, spatially-blocked, polygon-grouped cross-validation, compared
 fold-by-fold with a bootstrap interval over folds.
 
@@ -39,11 +39,13 @@ The same experiment is run at two extents:
 | **Surrey GIN** (application site) | 153 corridor polygons × 4 summers | 612 | 4 km | Unresolvable: the extent cannot test the hypothesis, and that is measurable |
 | **Fraser Valley transect** (test site) | 300 VRI forest stands × 4 summers | 1,200 | 25 km | Hypothesis reversed: the coarse model is better |
 
-Surrey returned a null. Instead of reading that as evidence against downscaling,
-the null was diagnosed: coarsening to 4 km removed only **12.3%** of the
-predictors' spatial variance, so Models A and B were very nearly the same model.
-Moving to a 100 km elevation transect (4–1,920 m) raised that to **48.4%**, which
-is where the question could actually be answered.
+Surrey returned a null. Rather than write that off as evidence against
+downscaling, I asked whether the experiment had been capable of detecting a
+difference at all: coarsening to 4 km removed only **12.3%** of the predictors'
+spatial variance, so Models A and B were very nearly the same model. I repeated
+the identical experiment on a 100 km elevation transect spanning 4 to 1,920 m,
+where coarsening raises that to **48.4%**, which is where the question could
+actually be answered.
 
 That diagnosis generalises into a **precondition other studies can apply**: before
 comparing climate resolutions, measure what fraction of predictor spatial variance
@@ -87,7 +89,7 @@ the reproduction commands below will show you directly.
 
 Both are reported in full in [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md).
 The direction of the result does not depend on either, and is independently
-supported by the rank correlations and the explanatory analysis; the word
+supported by the rank correlations and the explanatory analysis. The word
 "falsified" does.
 
 ## The response variable: CDEI
@@ -109,14 +111,14 @@ The rename was deliberate. An earlier version of this work called the index TVWS
 [Joshi et al. (2021)](https://doi.org/10.3390/rs13224635), and one that
 overstates what this index does, since its thermal term carries no
 between-polygon information (see below). The dry-edge construction is also not
-novel; [Le et al. (2024)](https://doi.org/10.3390/f15060915) build a comparable
+novel: [Le et al. (2024)](https://doi.org/10.3390/f15060915) build a comparable
 index in NDII–NDVI space. What is claimed here is the application and the
 validation, not the geometry.
 
 > **Note on the code:** the column holding this quantity is still named `tvwsi`
 > in `features.parquet` and throughout `src/pipeline/`. The cached panels were
-> built under the former name; renaming the field would invalidate them for no
-> scientific gain. `tvwsi` the column and CDEI the index are the same quantity.
+> built under the former name, and renaming the field would invalidate them for
+> no scientific gain. `tvwsi` the column and CDEI the index are the same quantity.
 
 **CDEI is a relative feature-space index, not a soil-moisture measurement**, and it
 has not been validated against any ground observation. Two findings from its own
@@ -200,7 +202,7 @@ python scripts/seed_sensitivity.py 12000 12
 
 > **ClimateBC acquisition is the bottleneck.** The web API allows roughly
 > **50 calls/hour per IP** (undocumented; there is no batch endpoint). A full
-> 153-corridor × 5-period pass is 765 calls, about 16 hours; the transect's
+> 153-corridor × 5-period pass is 765 calls, about 16 hours. The transect's
 > 300 stands take about 33 hours. The fetcher is paced, resumable, and keeps a
 > permanent disk cache, so re-running costs nothing for anything already fetched.
 > Track a run with `./scripts/climate_progress.sh --watch`.
@@ -210,8 +212,8 @@ Run the tests with `pytest`, and lint with `ruff check`.
 ## Conventions
 
 - **Analysis unit is always the polygon**, never a grid cell. Model B's coarse
-  cells are a device for degrading predictors; no quantity is ever computed for a
-  cell and no cell is ever a row.
+  cells are a device for degrading predictors. No quantity is ever computed for a
+  cell, and no cell is ever a row.
 - **Analysis CRS is EPSG:26910** (UTM 10N). Everything is reprojected before any
   spatial operation.
 - **Data is never committed.** `data/{raw,interim,processed}/` is gitignored.
@@ -242,7 +244,7 @@ Raw and intermediate data are not redistributed here.
 Phases 1–3b are complete: the experiment has been run at both extents, the
 explanatory analysis is done, and the applied index has been through independent
 validation. The manuscript is in preparation and has **not** been posted,
-submitted or peer reviewed; nothing here should be described as published. The
+submitted or peer reviewed. Nothing here should be described as published. The
 Surrey corridor ranking is exploratory pending ground confirmation.
 
 ## Use of generative AI
