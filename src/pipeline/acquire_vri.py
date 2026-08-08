@@ -5,7 +5,7 @@ Why this layer
 --------------
 Phase 3 returned INCONCLUSIVE over Surrey because ClimateBC's *between-unit*
 variation there is an order of magnitude smaller than its interannual variation
-(see ``docs/PHASE3_FINDINGS.md``). Phase 3b re-runs the same A-vs-B experiment
+(see ``docs/RESOLUTION_TEST_FINDINGS.md``). Phase 3b re-runs the same A-vs-B experiment
 on an extent where climate genuinely varies in space. That needs analysis units
 spanning real elevation, and Surrey's municipally-defined corridors have no
 equivalent in the valley.

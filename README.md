@@ -13,7 +13,7 @@ stand composition, not by the macroclimate gradient.
 This repository is the code, method and applied output. The full write-up is a
 manuscript in preparation for a preprint server. **It has not been posted,
 submitted or peer reviewed**, and this README will link its DOI once it is. Until then,
-[`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md) is the detailed account of what
+[`docs/RESOLUTION_TEST_FINDINGS.md`](docs/RESOLUTION_TEST_FINDINGS.md) is the detailed account of what
 the two extents found.
 
 ---
@@ -87,7 +87,7 @@ the reproduction commands below will show you directly.
   regularisation closes the gap to indistinguishability: Model A's
   deficit is substantially overfitting to fine climate detail.
 
-Both are reported in full in [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md).
+Both are reported in full in [`docs/RESOLUTION_TEST_FINDINGS.md`](docs/RESOLUTION_TEST_FINDINGS.md).
 The direction of the result does not depend on either, and is independently
 supported by the rank correlations and the explanatory analysis. The word
 "falsified" does.
@@ -234,7 +234,7 @@ Raw and intermediate data are not redistributed here.
 
 | If you want | Read |
 |---|---|
-| What the two extents found, with every number | [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md) |
+| What the two extents found, with every number | [`docs/RESOLUTION_TEST_FINDINGS.md`](docs/RESOLUTION_TEST_FINDINGS.md) |
 | The applied Surrey output, with its caveats | [`docs/deliverable/README.md`](docs/deliverable/README.md) |
 | The engineering design and why each library | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
 | To run it yourself | [Reproducing the analysis](#reproducing-the-analysis), above |

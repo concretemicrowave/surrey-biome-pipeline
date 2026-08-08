@@ -14,7 +14,7 @@ cross-ratio) are flat-null against the ranking (|rho| <= 0.08), while the only
 correlated radar signal (VH/VV backscatter) tracks canopy density (VH vs NDVI
 rho ~ +0.55). => the between-corridor ranking is confounded with canopy density
 and is NOT independently validated as water stress. The temporal axis validates
-separately (CDEI vs independent ClimateBC moisture; see docs/PHASE3_FINDINGS.md).
+separately (CDEI vs independent ClimateBC moisture; see docs/RESOLUTION_TEST_FINDINGS.md).
 
 CLI:  python -m src.pipeline.validate_sar -v          # all four summers (slow; hits PC STAC)
 """

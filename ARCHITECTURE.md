@@ -1,7 +1,7 @@
 # Architecture
 
 How the pipeline is built and why. This describes the code as it exists; for
-what the analysis *found*, see [`docs/PHASE3_FINDINGS.md`](docs/PHASE3_FINDINGS.md).
+what the analysis *found*, see [`docs/RESOLUTION_TEST_FINDINGS.md`](docs/RESOLUTION_TEST_FINDINGS.md).
 
 The design has one organising constraint, and almost everything below follows
 from it: **the analysis unit is the polygon, never a grid cell.** Surrey's

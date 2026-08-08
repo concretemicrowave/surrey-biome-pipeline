@@ -1,4 +1,4 @@
-# Phase 3 Findings: why the A-vs-B experiment is inconclusive at municipal scale
+# Extent 1 (Surrey): why the A-vs-B experiment is inconclusive at municipal scale
 
 > **Naming:** the response variable is **CDEI** (Canopy Dry-Edge Index). It was
 > called TVWSI in earlier drafts; that name belongs to Joshi et al. (2021),
@@ -141,7 +141,7 @@ single-municipality scale. The finding is therefore methodological:
 > the interannual variation, and smaller still than the spatial variation in the
 > ecological response being predicted.**
 
-This is a genuine, useful negative result, and it is what motivates the Phase 3b
+This is a genuine, useful negative result, and it is what motivates the transect
 transect: test the method where climate actually varies in space, then apply the
 conclusion back to Surrey.
 
@@ -159,7 +159,7 @@ conclusion back to Surrey.
 
 ---
 
-# Phase 3b Findings: the transect makes the test measurable, and it falsifies the hypothesis
+# Extent 2 (Fraser Valley transect): the test becomes measurable, and the hypothesis falls
 
 Status: **FINAL**, computed on the complete Fraser Valley transect panel (1,200
 rows = 300 VRI stands x 4 summers) on 2026-07-24, after ClimateBC acquisition
@@ -354,4 +354,4 @@ the RS-derived stress index and local stand/terrain context are the right ones.
   scores predictor families under the experiment's own blocked CV. CLI:
   `python -m src.pipeline.explain -v` (add `--build-terrain` to re-derive from
   the DEM; otherwise loads `data/interim/phase3b/terrain_stands.parquet`).
-* Walkthrough: `notebooks/phase3b_modeling.ipynb`, mirroring the Phase 3 one.
+* Walkthrough: `notebooks/phase3b_modeling.ipynb`, mirroring the Surrey one.

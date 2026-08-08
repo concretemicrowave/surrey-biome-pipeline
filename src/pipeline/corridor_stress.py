@@ -21,7 +21,7 @@ We therefore rank by ascending mean summer CDEI and express it as a stress
 percentile (100 = most stressed). CDEI is a relative feature-space index, not a
 soil-moisture measurement; over flat Surrey the most-stressed corridors tend to
 be the denser-canopy ones nearest their moisture limit (see the honesty note in
-docs/PHASE3_FINDINGS.md).
+docs/RESOLUTION_TEST_FINDINGS.md).
 
 Outputs (to docs/deliverable/):
   corridor_stress_ranking.csv   — 144 GIN corridors, with Surrey's own

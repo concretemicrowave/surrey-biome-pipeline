@@ -150,7 +150,7 @@ order is not a density artifact even though the value is partly a density signal
 - CDEI is a **relative feature-space index**, not a soil-moisture measurement; it is
   not validated against field/ground observations.
 - Between-corridor differences over flat Surrey are genuinely subtle: the same
-  reason the climate-resolution hypothesis was untestable here (`docs/PHASE3_FINDINGS.md`).
+  reason the climate-resolution hypothesis was untestable here (`docs/RESOLUTION_TEST_FINDINGS.md`).
 - **The index cannot compare summers to each other.** Its dry edge encodes a
   between-corridor relationship and is applied to between-summer variation, where
   that relationship does not hold, so dry summers come out wetter (see the TIME
