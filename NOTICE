@@ -1,0 +1,35 @@
+Third-party material in this repository
+=======================================
+
+The MIT licence in LICENSE covers the software, the derived analysis outputs and
+the documentation authored by Joshua Wang. It does NOT cover the City of Surrey
+material reproduced under attribution, described below.
+
+City of Surrey, Biodiversity Conservation Strategy, Appendix J
+--------------------------------------------------------------
+
+These columns of docs/deliverable/corridor_stress_ranking.csv are the City of
+Surrey's text and attributes, not the author's:
+
+    recommendation, ecological_value, risk_of_development, corridor_type,
+    target_width_m
+
+They are reproduced verbatim from Appendix J of the City of Surrey's
+Biodiversity Conservation Strategy, pages 119-129 of the parent report:
+
+    https://www.surrey.ca/sites/default/files/media/documents/Appendix_J.pdf
+
+parsed by scripts/parse_appendix_j.py. The same attributes are also published by
+the City on its open-data GIS layer. Copyright in all of it rests with the City
+of Surrey. They are reproduced here under attribution because the corridor
+ranking is not usable by a planner without them.
+
+Everything else in that file is the author's and carries the repository's
+licence: the CDEI values, the ranks, the percentiles and the priority flag.
+
+Why this is a separate file
+---------------------------
+
+LICENSE is left as unmodified MIT text so that automated licence detection
+(GitHub, Zenodo, licensee) continues to identify it correctly. Adding the
+carve-out there would risk the repository being reported as "Other".

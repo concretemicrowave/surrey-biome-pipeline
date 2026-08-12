@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Surrey Corridor Water Stress — SFRSF 2027 board</title>
+<style>
+/* ---------------------------------------------------------------------------
+   Science-fair display board, authored at true print size.
+
+   44 x 36 in trifold. 44 in clears every tier: GVRSF caps at 1.1 m (44 in) and
+   CWSF at 1.2 m, while a stock US trifold is 48 in and over both. Panels are
+   11 | 22 | 11 in, and nothing important crosses a fold.
+
+   UNITS: 1in = 96px in CSS, so the board is 4224 x 3456 px and every pt below
+   converts at 1pt = 1/72in. Font sizes are given in pt so they are literally
+   the printed point size — set --scale to 1 and Chrome's "Print > Save as PDF"
+   at 100% with no margins emits exact print size.
+
+   PALETTE: --accent and --accent-pale are lifted from the manuscript preamble
+   (docs/preprint/latex/main.tex) so board and paper share one identity. The data
+   colours come from src/pipeline/viz.py. Three roles are kept apart on purpose:
+   identity = structure, series = data, critical = status. See viz.py.
+--------------------------------------------------------------------------- */
+:root{
+  --accent:#1f4e5f;        /* manuscript accent: headers, title, structure */
+  --accent-pale:#eef3f5;
+  --ink:#0b0b0b;
+  --ink-2:#52514e;
+  --muted:#898781;
+  --grid:#e1e0d9;
+  --axis:#c3c2b7;
+  --series:#2a78d6;        /* data: the fine-resolution model, throughout */
+  --critical:#d03b3b;      /* status: stress, falsification, limits */
+  --surface:#fcfcfb;
+
+  --board-w:44in;
+  --board-h:36in;
+  --wing:11in;
+  --centre:22in;
+  --pad:0.62in;
+}
+
+/* Inter, self-hosted, so the render is deterministic.
+   Declaring `font-family:"Inter"` alone was not enough: Inter is not installed on
+   this machine, so Chrome fell silently through to Helvetica Neue and embedded
+   only Regular and Bold. Four declared weights (400/600/700/800) collapsed into
+   two, flattening the hierarchy this layout depends on — and any machine that DID
+   have Inter would have produced a different board from the same file. Shipping
+   the woff2 files removes both problems: what renders here is what renders
+   anywhere. Inter is SIL Open Font License. */
+@font-face{font-family:"InterBoard";font-style:normal;font-weight:400;
+  font-display:block;src:url("fonts/inter-400.woff2") format("woff2")}
+@font-face{font-family:"InterBoard";font-style:normal;font-weight:600;
+  font-display:block;src:url("fonts/inter-600.woff2") format("woff2")}
+@font-face{font-family:"InterBoard";font-style:normal;font-weight:700;
+  font-display:block;src:url("fonts/inter-700.woff2") format("woff2")}
+@font-face{font-family:"InterBoard";font-style:normal;font-weight:800;
+  font-display:block;src:url("fonts/inter-800.woff2") format("woff2")}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#7a7a78}
+
+.board{
+  width:var(--board-w); height:var(--board-h);
+  background:var(--surface);
+  display:grid;
+  grid-template-columns:var(--wing) var(--centre) var(--wing);
+  position:relative;
+  font-family:"InterBoard","Helvetica Neue",Arial,sans-serif;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Fold lines. Screen-only: the wings physically fold here, so this is a
+   placement guide, not artwork. */
+.fold{position:absolute;top:0;bottom:0;width:2px;background:var(--axis);opacity:.5}
+.fold.a{left:var(--wing)} .fold.b{left:calc(var(--wing) + var(--centre))}
+@media print{.fold{display:none}}
+
+.panel{padding:var(--pad);display:flex;flex-direction:column;justify-content:space-between}
+.panel.centre{padding-left:.75in;padding-right:.75in;justify-content:flex-start}
+
+/* --- Type scale, in real printed points ---------------------------------- */
+h1{font-size:132pt;line-height:1.02;font-weight:800;letter-spacing:-.026em;color:var(--accent)}
+h2{font-size:28pt;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:#fff}
+p{font-size:30pt;line-height:1.42;color:var(--ink-2)}
+.eyebrow{font-size:26pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.small{font-size:26pt;line-height:1.38}
+.tiny{font-size:22pt;line-height:1.4;color:var(--muted)}
+
+/* Filled header bars, numbered. A hairline rule plus a bold word gives no
+   reading order; a numbered bar does, and judges follow one if offered. */
+.bar{
+  display:flex;align-items:baseline;gap:.16in;
+  background:var(--accent);padding:.13in .2in;margin:.34in 0 .17in;
+}
+.bar:first-child{margin-top:0}
+.bar .n{font-size:28pt;font-weight:800;color:#8fb3bd;font-variant-numeric:tabular-nums}
+.bar.crit{background:var(--critical)}
+.bar.series{background:var(--series)}
+
+/* --- The answer, in the strongest treatment on the board ----------------- */
+.answer{background:var(--accent);color:#fff;padding:.3in .34in;margin:.26in 0}
+.answer .lede{font-size:47pt;line-height:1.24;font-weight:700;color:#fff}
+.answer .sub{font-size:33pt;line-height:1.3;color:#c8dae0;margin-top:.12in}
+
+/* --- Figures ------------------------------------------------------------- */
+figure{margin:0}
+figure img{display:block;width:100%;height:auto}
+figcaption{font-size:25pt;line-height:1.35;color:var(--ink-2);margin-top:.12in}
+
+.results{display:flex;gap:.28in;align-items:flex-start;margin-top:.1in}
+.results .map{flex:0 0 13.1in}
+.results .evidence{flex:1;display:flex;flex-direction:column;gap:.24in}
+
+/* --- Stat tiles ---------------------------------------------------------- */
+.tile{border:2px solid var(--axis);padding:.2in .22in}
+.tile .stat{font-size:80pt;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.tile .stat.grey{color:var(--muted)}
+.tile .stat.series{color:var(--series)}
+.tile .stat.crit{color:var(--critical)}
+.tile p{font-size:26pt;margin-top:.08in}
+
+/* --- Blocks -------------------------------------------------------------- */
+.block{background:var(--accent-pale);padding:.19in .22in;margin-top:.14in}
+.block h3{font-size:29pt;font-weight:800;color:var(--accent);margin-bottom:.06in}
+.block p{font-size:26pt;line-height:1.32}
+
+.pending{border:3px dashed var(--muted);padding:.2in .22in;margin-top:.2in}
+/* Photo slot. Deliberately loud and dashed: this is a hole in the board, and it
+   must be impossible to print by accident thinking it is finished. */
+.photoslot{border:3px dashed var(--critical);background:#fdf4f4;
+  padding:.24in .24in;margin-top:.22in}
+.photoslot .flag{font-size:25pt;font-weight:800;letter-spacing:.08em;color:var(--critical)}
+.photoslot .shot{font-size:22pt;line-height:1.5;color:var(--ink-2);margin-top:.1in;
+  font-variant-numeric:tabular-nums}
+.pending .flag{font-size:25pt;font-weight:800;letter-spacing:.1em;color:var(--muted)}
+.pending .slot{font-size:24pt;line-height:1.55;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin-top:.1in}
+
+.spacer{flex:1}
+.credits{border-top:2px solid var(--axis);padding-top:.22in;margin-top:.22in}
+.credits .name{font-size:30pt;font-weight:800;color:var(--accent)}
+.credits .meta{font-size:25pt;color:var(--ink-2);margin-top:.05in}
+
+@page{size:44in 36in;margin:0}
+@media print{html,body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="fold a"></div><div class="fold b"></div>
+
+  <!-- ================= LEFT WING — the question and the method ========== -->
+  <section class="panel">
+    <div class="bar"><span class="n">1</span><h2>The question</h2></div>
+    <p>Surrey manages 144 green corridors on a limiting budget. Which of them are
+      drying out and should get water, soil work or replanting first?</p>
+
+    <div class="bar"><span class="n">2</span><h2>The assumption</h2></div>
+    <p>It is widely assumed that answering this needs climate data at the finest
+      possible spatial detail. Downscaling products resolve a few hundred metres,
+      whereas regional climate models resolve tens of kilometres. Finer is
+      assumed better.</p>
+    <p style="margin-top:.16in">I tested this assumption.</p>
+
+    <div class="bar series"><span class="n">3</span><h2>The experiment</h2></div>
+    <figure>
+      <img src="../figures/board/ab_schematic.png"
+           alt="Surrey corridors. Model A samples a continuous climate field at each
+                corridor's own point; Model B replaces those values with their 4 km
+                cell averages">
+      <figcaption>Two identical forecasting models, same corridors, same
+        variables. Model B is Model A's <em>own</em> values averaged into 4 km
+        cells, not a different dataset, so resolution is the only thing that
+        differs between them.</figcaption>
+    </figure>
+
+    <div class="photoslot">
+      <div class="flag">📷 PHOTO TO TAKE: REPLACE THIS BOX</div>
+      <p class="small" style="color:var(--ink);margin-top:.08in">A photograph of one
+        of your own top-ranked corridors. It grounds an abstract satellite project
+        in a place a Surrey judge recognises.</p>
+      <div class="shot">
+        GIN 36 &nbsp;·&nbsp; McNally Creek &nbsp;49.02052, −122.77180<br>
+        rank 7 of 144 &nbsp;·&nbsp; High value &nbsp;·&nbsp; ★ priority<br>
+        driest third in 4 of 4 summers
+      </div>
+      <p class="tiny" style="margin-top:.1in">From the 10 Ave crossing, framing canopy
+        and the adjacent construction in one frame, so the squeeze is visible.
+        Summer, midday, landscape.</p>
+    </div>
+
+    <div class="spacer"></div>
+    <div class="credits">
+      <div class="name">JOSHUA WANG</div>
+      <div class="meta">FHSS &middot; Grade 10 &middot; South Fraser Regional Science Fair 2027</div>
+      <p class="tiny" style="margin-top:.1in">Analysis code and data: link pending release.<br>
+        All imagery Sentinel&#8209;2, Sentinel&#8209;1 and Landsat are free and public.</p>
+    </div>
+  </section>
+
+  <!-- ================= CENTRE — title, answer, results ================== -->
+  <section class="panel centre">
+    <div class="eyebrow">City of Surrey &middot; Green Infrastructure Network &middot; 144 corridors</div>
+    <h1 style="margin-top:.16in">Does finer climate data find the corridors that are drying out?</h1>
+
+    <div class="answer">
+      <div class="lede">No. Averaging the same climate data over large areas
+        predicted water stress better than fine detail did.</div>
+      <div class="sub">And the bigger result is a test that tells you, in advance,
+        when a resolution question cannot be answered at all.</div>
+    </div>
+
+    <div class="results">
+      <figure class="map">
+        <img src="../deliverable/poster/fig1_stress_map_untitled.png"
+             alt="Surrey corridors coloured by canopy water-stress percentile">
+        <figcaption>All 144 GIN corridors scored for canopy water stress from free
+          satellite imagery. Darkest = most stressed.</figcaption>
+      </figure>
+
+      <div class="evidence">
+        <figure>
+          <img src="../figures/poster/paired_ci_placed.png"
+               alt="Paired delta-RMSE by random seed; twenty point estimates favour the coarse model, twenty intervals cross zero">
+          <figcaption>Twenty random seeds. The coarse model leads every time, and
+            every interval still crosses zero.</figcaption>
+        </figure>
+
+        <div class="tile"><div class="stat grey">12.3%</div>
+          <p>of spatial detail lost when Surrey's climate data is coarsened. Too
+             flat: the question is unanswerable here.</p></div>
+        <div class="tile"><div class="stat series">48.4%</div>
+          <p>lost on a 100 km valley transect rising 4–1,920 m. Here, the question
+             is answerable.</p></div>
+        <div class="tile"><div class="stat crit">32 of 32</div>
+          <p>settings put the coarse model ahead on that transect. The direction
+             is unanimous. Every confidence interval still spans zero, so this is
+             a consistent result and not a proven one.</p></div>
+      </div>
+    </div>
+
+    <figure style="margin-top:.34in">
+      <img src="../figures/board/ranking_wide.png"
+           alt="Top 20 most-stressed corridors by ID, three flagged as candidate priorities">
+      <figcaption>The map shows <em>where</em>; this shows <em>which</em>, by corridor
+        ID, against the ecological-value and development-risk lens the city would
+        triage on.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ================= RIGHT WING — drivers, method, verdict ============ -->
+  <section class="panel">
+    <div class="bar"><span class="n">4</span><h2>So what drives it?</h2></div>
+    <p>Not regional climate. A stand of trees dries out according to which way its
+      slope faces and which species grow in it. Terrain and stand structure were
+      the only inputs to reach positive skill, while adding climate actively
+      dampened the result.</p>
+
+    <div class="bar series"><span class="n">5</span><h2>The part others can reuse</h2></div>
+    <p class="small">Before trusting any resolution comparison, it must clear two
+      preconditions:</p>
+    <div class="block"><h3>1. Skill gate</h3>
+      <p>At least one model must beat simply guessing the average. Otherwise you
+         are asking which of two broken clocks is more accurate.</p></div>
+    <div class="block"><h3>2. Contrast gate</h3>
+      <p>Coarsening must destroy a real share of the predictors' spatial detail.
+         If it barely changes them, the two models are the same model.</p></div>
+    <p class="small" style="margin-top:.16in;color:var(--ink);font-weight:600">
+      Surrey failed gate 2 at 12.3%. That does not mean fine detail lost here.
+      It means the comparison could not be made here.</p>
+
+    <figure style="margin-top:.2in">
+      <img src="../figures/board/transect_profile.png"
+           alt="Elevation of 300 stands along the transect, against Surrey's own range">
+      <figcaption>Surrey's entire relief fits inside the red band.</figcaption>
+    </figure>
+
+    <div class="bar crit"><span class="n">6</span><h2>Validation: one failed, one held</h2></div>
+    <p class="small">I checked the index two ways. Extending the record from four
+      to nine summers broke the drought result, so I withdrew it. The ranking
+      held: radar shows the index is tangled up with canopy density, but ranking
+      each corridor by how dry it is <em>for its own density</em> gives nearly
+      the same order (&rho;&nbsp;=&nbsp;0.92). Nothing has been checked on the
+      ground, so the map stays exploratory.</p>
+
+    <div class="pending">
+      <div class="flag">⚠ CLAIM WITHDRAWN</div>
+      <p class="small" style="color:var(--ink);font-weight:600;margin-top:.08in">
+        This was my strongest result. It did not survive a longer record.</p>
+      <div class="slot">
+        Four summers 2022&#8209;2025 &nbsp;····&nbsp; tracks drought, r &minus;0.68<br>
+        Nine summers 2017&#8209;2025 &nbsp;····&nbsp; does not reproduce<br>
+        2018 and 2021, the 2 driest &nbsp;····&nbsp; read as the LEAST stressed of 9
+      </div>
+      <p class="tiny" style="margin-top:.1in">The dry edge is a line fitted by
+        comparing corridors to each other, at a slope of 0.53. Across summers the
+        same two bands only move at 0.26. So when a dry summer pulls greenness
+        down, the line drops faster than the corridor does, and the index scores
+        that gap as water margin. Dry summers come out wetter.</p>
+    </div>
+
+    <div class="bar"><span class="n">7</span><h2>What Surrey should do</h2></div>
+    <p class="small">Don't spend on finer climate data, spend on the site: soil,
+      canopy and irrigation. What the measurement reliably delivers is coverage:
+      all 144 corridors, including ones only 10 m wide, measured from free public
+      satellite imagery and re&#8209;ranked every summer, giving a fresh ranking
+      each time, not a comparison between summers.</p>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,164 @@
+# ---- Data: NEVER commit geospatial data (rasters/vectors are huge) ----
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
+*.tif
+*.tiff
+*.jp2
+*.nc
+*.zarr/
+*.grib
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.geojson
+*.parquet
+# allow small config/sample geojson explicitly if needed:
+!config/*.geojson
+
+# ---- Secrets / credentials ----
+.env
+.env.*
+*.key
+credentials.json
+service-account*.json
+config/secrets.*
+~/.config/earthengine
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.uv/
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- OS / editor ----
+.DS_Store
+.vscode/
+.idea/
+
+# Local run logs
+logs/
+
+# ---- Working files kept local, not published ----
+# Agent/session instructions and internal planning
+CLAUDE.md
+PHASE3_PLAN.md
+# NotebookLM progress notes (internal running log)
+docs/*_notebooklm_note.md
+# Narrative scaffolding for the board / city email / manuscript
+docs/CORE_NARRATIVE.md
+# Standalone teaching sandboxes, unrelated to the pipeline
+docs/bilinear_interpolation.html
+docs/ml_pipeline_explorer.html
+
+# ---- Teaching material ----
+# Six ML labs that rebuild experiment.py in miniature on the real 612-row panel,
+# plus the grader they feed. They are study material, not part of the analysis:
+# nothing in src/, scripts/ or the paper imports them, and no result depends on
+# them. Their narrative half already lives in ../learning-centre/surrey/, so
+# keeping the notebooks here left a teaching apparatus split across two repos
+# and put coursework in a research compendium.
+#
+# They stay on disk and still run, because they import src.pipeline and read
+# data/processed/features.parquet and would break anywhere else.
+notebooks/labs/
+
+# ---- Manuscript ----
+# Source is tracked; build artifacts are not. The whole directory was ignored
+# until 2026-08-12 on the reasoning below, which was sound about publishing and
+# wrong about versioning: this manuscript has had its central result corrected
+# four times, each correction propagated by hand across two .tex files, and one
+# of those passes exists only to record that an earlier "propagation done" note
+# was false. An unversioned main.tex is precisely the failure history catches.
+#
+# ⚠️ THE REPOSITORY IS PUBLIC AND THE PREPRINT IS NOT POSTED. Tracking the
+# source means the next push publishes the manuscript, ahead of the preprint and
+# against the hold that is still in force. Commit freely; do not push until the
+# preprint is up. That is the surviving half of the original reasoning:
+#
+#   "The paper is not published from this repository. It goes to a preprint
+#    server; the README links the DOI once posted. Keeping a draft here would
+#    put an unposted, still-revising manuscript in public and create a second
+#    copy to drift out of sync with the version of record."
+#
+# Artifacts stay out. _archive/ is 7.6M of a 13M tree and holds the dead
+# monolith, which CLAUDE.md forbids editing or quoting. The figures are excluded
+# too, so a fresh clone does NOT build until they are regenerated.
+# Private correspondence, not manuscript source. The APC waiver enquiry states
+# the author has no employer, no grant and is a secondary-school student. That
+# is fine to send an editorial office and is not something a public repository
+# should carry. Remove this line if you want it tracked.
+docs/papers/waiver_enquiry_MEE.md
+
+# Process, not product. These are inputs to how the manuscript was made: prompts,
+# completed plans, an AI-generated referee report, and reading checklists. A
+# reader arriving from the paper wants the manuscript source and the pipeline;
+# a referee reads this kind of file as detritus, and the prompt library in
+# particular is not something the repository needs to publish. The AI-use
+# disclosure that DOES belong in public is in .zenodo.json and the manuscript.
+docs/papers/MEE_DESK_CHECK_PROMPT.md
+docs/papers/REFEREE_PASS_RUNBOOK.md
+docs/papers/CITATION_TARGETS.md
+docs/papers/READING_ORDER.md
+docs/papers/SPLIT_PLAN.md
+docs/papers/split.py
+docs/papers/**/REFEREE_BRIEF.md
+docs/papers/paper-a/BLIND_REFEREE_PROMPTS.md
+docs/papers/paper-a/VOICE_PASS_PROMPT.md
+docs/papers/paper-a/REFRAME_PLAN.md
+docs/papers/paper-a/referee_report_paperA.md
+docs/papers/GEMINI_GENRE_PROMPT.md
+docs/papers/GENRE_REFS_VERIFIED.md
+docs/REPO_SLIMMING_RESEARCH_PROMPT.md
+
+# The known-weakness register. Kept local until the preprint is posted, for two
+# reasons. It is written as a lab notebook to self, in a register voice that
+# judges its own results ("indefensible", "embarrassing rather than
+# interesting"), and the reader-facing version of it is the paper's Limitations
+# section. And REFEREE_BRIEF.md withholds this list on purpose so an outside
+# report can be compared against it afterwards; publishing both in one repo
+# defeats that. Revisit once the preprint is up.
+docs/papers/KNOWN_ISSUES.md
+
+# ⛔ THE MANUSCRIPTS THEMSELVES, held until the preprint is posted. Pushing these
+# would put both unposted papers on a public repository ahead of the preprint
+# server, which is the situation the original blanket ignore existed to prevent.
+# The bibliographies, build scripts and wordcount.py stay tracked: they carry no
+# results, and they keep part of the version control this directory was opened
+# up for. DELETE THESE TWO LINES the day the preprint goes up.
+docs/papers/**/*.tex
+
+docs/papers/_archive/
+docs/papers/**/figures/
+docs/papers/**/*.pdf
+docs/papers/**/*.zip
+docs/papers/**/*.bak
+docs/papers/**/*.superseded
+
+# Generated board + poster figure variants. All rebuild in seconds from tracked
+# source: `--mode poster`, scripts/plot_board_figures.py, docs/board/build.sh.
+# The paper-mode figures in docs/figures/ and docs/deliverable/ stay tracked —
+# the manuscript embeds them. The board's fonts are tracked deliberately: without
+# them the board renders in a substitute face and is not reproducible.
+docs/figures/board/
+docs/figures/poster/
+docs/deliverable/poster/
+docs/board/board.pdf
+docs/board/board_preview.png
+docs/board/board_detail_300dpi.png
+
+# The Learning Centres moved out of this repository on 2026-08-05 and now live
+# in ../learning-centre, which carries its own ignore rules for those extracts.
+
+# Anonymised review archive, rebuilt by scripts/make_anon_archive.sh on demand.
+surrey-pipeline-anon.zip
