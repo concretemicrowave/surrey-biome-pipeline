@@ -1,5 +1,7 @@
 # surrey-biome-pipeline
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22050485.svg)](https://doi.org/10.5281/zenodo.22050485)
+
 A controlled test of whether high-resolution **"scale-free" downscaled climate data**
 predicts polygon-scale water stress better than **coarse climate grids**, plus the
 satellite monitoring index built after that approach was shown not to work.
@@ -272,8 +274,9 @@ resumes for free.
 
 The derived analysis panels the results are computed from are small
 (under 350 kB each) and are the practical starting point for anyone who wants to
-rerun the modelling without the acquisition. They are available on request and
-will be deposited with a DOI alongside the manuscript.
+rerun the modelling without the acquisition. All three are archived with this
+repository's v1.0.0 snapshot at
+[10.5281/zenodo.22050486](https://doi.org/10.5281/zenodo.22050486).
 
 The applied outputs are committed, under `docs/deliverable/`.
 
