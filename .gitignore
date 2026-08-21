@@ -110,6 +110,13 @@ notebooks/labs/
 # Revisit this whole block the day the preprint goes up.
 docs/papers/
 
+# The science-fair board. Untracked 2026-08-21 so it stops travelling inside the
+# Zenodo source snapshot, where a poster carrying the author's name, school and
+# fair had no reason to be. It stays on disk and still builds. Note that the
+# published v1.0.0 archive already contains it: Zenodo files are immutable, so it
+# leaves the record only whenever a new version is published for another reason.
+docs/board/
+
 # Written to be pasted into an AI session, which is not something a research
 # compendium publishes. Untracked 2026-08-21; the file stays on disk.
 docs/REPO_SLIMMING_RESEARCH_PROMPT.md
