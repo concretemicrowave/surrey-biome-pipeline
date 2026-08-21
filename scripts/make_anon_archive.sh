@@ -49,6 +49,14 @@ fi
 # 1. Metadata files whose entire purpose is attribution. Nothing to redact.
 rm -f "$root/CITATION.cff" "$root/.zenodo.json"
 
+# 1b. The science-fair board and this script. The board displays the author's
+#     name, school and fair by design, so redacting one string would leave the
+#     rest; a referee reviewing a methods manuscript has no use for the poster
+#     anyway. This script carries the author's name in its LICENSE check and the
+#     search pattern below, which is also why it used to fail its own verify.
+rm -rf "$root/docs/board"
+rm -f "$root/scripts/make_anon_archive.sh" "$root/scripts/plot_board_figures.py"
+
 # 2. The licence stays; only the holder is withheld. Fail loudly rather than
 #    ship a licence whose holder line silently did not match.
 if ! grep -q "^Copyright (c) 2026 Joshua Wang$" "$root/LICENSE"; then
@@ -57,6 +65,30 @@ if ! grep -q "^Copyright (c) 2026 Joshua Wang$" "$root/LICENSE"; then
 fi
 sed -i '' 's/^Copyright (c) 2026 Joshua Wang$/Copyright (c) 2026 The Author(s)/' \
   "$root/LICENSE"
+
+# 2b. NOTICE carries the City of Surrey attribution and the Inter OFL, so it
+#     stays, but it names the author in the same breath.
+sed -i '' 's/documentation authored by Joshua Wang/documentation authored by the author/' \
+  "$root/NOTICE"
+
+# 2c. The author's own archive links. These carry no name themselves, so the
+#     pattern check below cannot see them, but they RESOLVE to a Zenodo record
+#     with the author's name, ORCID and affiliation on it. MEE's double-anonymous
+#     FAQ asks for archive references to be anonymised for exactly this reason.
+python3 - "$root" <<'PYEOF'
+import pathlib, re, sys
+readme = pathlib.Path(sys.argv[1]) / "README.md"
+t = readme.read_text()
+t = re.sub(r"^\[!\[DOI\]\(https://zenodo\.org/badge.*?\n\n", "", t, flags=re.M | re.S)
+t = t.replace(
+    "All three are archived with this\nrepository's v1.0.0 snapshot at\n"
+    "[10.5281/zenodo.22050486](https://doi.org/10.5281/zenodo.22050486).",
+    "All three are archived with this repository's v1.0.0 snapshot. The archive\n"
+    "DOI is withheld in this copy because it resolves to a record naming the\n"
+    "author; it is given in full in the non-anonymous version.")
+readme.write_text(t)
+print("   neutralised archive links in README.md")
+PYEOF
 
 # 3. Notebook OUTPUTS, which is where the leaks are: two cells print the absolute
 #    repo path. The code cells are clean, so this rewrites printed text only and
@@ -85,8 +117,13 @@ PYEOF
 #    Wang, and legitimately appears in code comments. Match the author's own
 #    forms, and check filenames as well as contents, as the video asks.
 echo "==> verifying"
-bad='joshua|dev@starise|joshuawang2048|concretemicrowave|0009-0002|/Users/'
-if grep -rElI "$bad" "$root" 2>/dev/null | sed "s|$root/||" | grep .; then
+# \bfhss\b is bounded on purpose: bare 'fhss' collides with base64 image data
+# inside the notebook outputs and fails the check on every run.
+bad='joshua|dev@starise|joshuawang2048|concretemicrowave|0009-0002|/Users/|fraser heights|\bfhss\b'
+# Resolvable-by-identity guard: this project's own Zenodo DOIs name the author
+# on the landing page even though the string here does not.
+bad="$bad|10\.5281/zenodo\.2205048"
+if grep -rElIi "$bad" "$root" 2>/dev/null | sed "s|$root/||" | grep .; then
   echo "!! identifying material in the files above; archive NOT written" >&2
   exit 1
 fi
