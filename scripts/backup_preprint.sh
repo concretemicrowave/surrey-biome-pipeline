@@ -26,13 +26,13 @@ KEEP="${KEEP:-10}"
 
 mkdir -p "$DEST"
 TAR="$DEST/preprint_$(date +%Y-%m-%d_%H%M).tar.gz"
-tar --exclude='.DS_Store' -czf "$TAR" -C docs preprint
+tar --exclude='.DS_Store' -czf "$TAR" -C docs papers
 
 # Verify by restoring and diffing. An archive nobody has opened is not a backup.
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 tar -xzf "$TAR" -C "$TMP"
-if diff -r -x '.DS_Store' "$TMP/preprint" "$SRC" >/dev/null; then
+if diff -r -x '.DS_Store' "$TMP/papers" "$SRC" >/dev/null; then
   echo "verified  $TAR  ($(du -h "$TAR" | cut -f1))"
 else
   echo "RESTORE DIFFERS FROM SOURCE -- do not trust $TAR" >&2
