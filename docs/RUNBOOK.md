@@ -7,7 +7,9 @@ reproducing a published number, or checking how something was originally built.
 
 Live rules stay in `CLAUDE.md`. Results and their interpretation stay in
 `docs/RESOLUTION_TEST_FINDINGS.md`. The manuscript weakness register stays in
-`docs/papers/KNOWN_ISSUES.md`.
+`docs/papers/KNOWN_ISSUES.md`. The first and third of those are local to the
+author's working copy and are not in this repository, since the manuscript is
+held until the preprint is posted.
 
 ---
 

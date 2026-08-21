@@ -27,6 +27,21 @@ ranking is not usable by a planner without them.
 Everything else in that file is the author's and carries the repository's
 licence: the CDEI values, the ranks, the percentiles and the priority flag.
 
+Inter (typeface), The Inter Project Authors
+------------------------------------------
+
+The four font files in docs/board/fonts/ are Inter, not the author's work. They
+are vendored rather than linked because declaring the family by name alone fell
+through to a substitute face and collapsed four weights into two, which made the
+board unreproducible. Inter is licensed under the SIL Open Font License 1.1,
+whose terms require the licence to travel with the fonts:
+
+    docs/board/fonts/OFL.txt
+
+The OFL applies to those four files only. Everything else under docs/board/,
+including board.html and build.sh, is the author's and carries the repository's
+licence.
+
 Why this is a separate file
 ---------------------------
 

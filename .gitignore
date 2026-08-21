@@ -94,56 +94,29 @@ notebooks/labs/
 # Artifacts stay out. _archive/ is 7.6M of a 13M tree and holds the dead
 # monolith, which CLAUDE.md forbids editing or quoting. The figures are excluded
 # too, so a fresh clone does NOT build until they are regenerated.
-# Private correspondence, not manuscript source. The APC waiver enquiry states
-# the author has no employer, no grant and is a secondary-school student. That
-# is fine to send an editorial office and is not something a public repository
-# should carry. Remove this line if you want it tracked.
-docs/papers/waiver_enquiry_MEE.md
+# ⛔ THE MANUSCRIPT DIRECTORY, ignored in full until the preprint is posted.
+# It holds both unposted papers, the known-weakness register, the referee briefs,
+# the prompt library and the APC waiver enquiry, none of which a public
+# repository should carry ahead of the preprint server.
+#
+# The two build scripts, the two bibliographies and wordcount.py were tracked
+# until 2026-08-21 on the grounds that they carry no results. They came out
+# because a reader arriving from the paper finds a build script with no
+# manuscript to build, and because the Zenodo snapshot should not freeze half a
+# directory. The cost is that references.bib is no longer under version control,
+# and its 39 entries were each resolved by DOI after four wrong Crossref
+# first-hits. scripts/backup_preprint.sh covers that locally.
+#
+# Revisit this whole block the day the preprint goes up.
+docs/papers/
 
-# Process, not product. These are inputs to how the manuscript was made: prompts,
-# completed plans, an AI-generated referee report, and reading checklists. A
-# reader arriving from the paper wants the manuscript source and the pipeline;
-# a referee reads this kind of file as detritus, and the prompt library in
-# particular is not something the repository needs to publish. The AI-use
-# disclosure that DOES belong in public is in .zenodo.json and the manuscript.
-docs/papers/MEE_DESK_CHECK_PROMPT.md
-docs/papers/REFEREE_PASS_RUNBOOK.md
-docs/papers/CITATION_TARGETS.md
-docs/papers/READING_ORDER.md
-docs/papers/SPLIT_PLAN.md
-docs/papers/split.py
-docs/papers/**/REFEREE_BRIEF.md
-docs/papers/paper-a/BLIND_REFEREE_PROMPTS.md
-docs/papers/paper-a/VOICE_PASS_PROMPT.md
-docs/papers/paper-a/REFRAME_PLAN.md
-docs/papers/paper-a/referee_report_paperA.md
-docs/papers/GEMINI_GENRE_PROMPT.md
-docs/papers/GENRE_REFS_VERIFIED.md
+# Written to be pasted into an AI session, which is not something a research
+# compendium publishes. Untracked 2026-08-21; the file stays on disk.
 docs/REPO_SLIMMING_RESEARCH_PROMPT.md
 
-# The known-weakness register. Kept local until the preprint is posted, for two
-# reasons. It is written as a lab notebook to self, in a register voice that
-# judges its own results ("indefensible", "embarrassing rather than
-# interesting"), and the reader-facing version of it is the paper's Limitations
-# section. And REFEREE_BRIEF.md withholds this list on purpose so an outside
-# report can be compared against it afterwards; publishing both in one repo
-# defeats that. Revisit once the preprint is up.
-docs/papers/KNOWN_ISSUES.md
-
-# ⛔ THE MANUSCRIPTS THEMSELVES, held until the preprint is posted. Pushing these
-# would put both unposted papers on a public repository ahead of the preprint
-# server, which is the situation the original blanket ignore existed to prevent.
-# The bibliographies, build scripts and wordcount.py stay tracked: they carry no
-# results, and they keep part of the version control this directory was opened
-# up for. DELETE THESE TWO LINES the day the preprint goes up.
-docs/papers/**/*.tex
-
-docs/papers/_archive/
-docs/papers/**/figures/
-docs/papers/**/*.pdf
-docs/papers/**/*.zip
-docs/papers/**/*.bak
-docs/papers/**/*.superseded
+# Backs up docs/papers/, which is ignored above, so for anyone who clones this
+# repository it targets a directory they do not have. Local tool, not product.
+scripts/backup_preprint.sh
 
 # Generated board + poster figure variants. All rebuild in seconds from tracked
 # source: `--mode poster`, scripts/plot_board_figures.py, docs/board/build.sh.
