@@ -1,0 +1,79 @@
+[project]
+name = "surrey-biome-pipeline"
+# Keep in step with CITATION.cff and .zenodo.json — all three are read as the
+# release version, and a Zenodo DOI freezes whatever they say at release time.
+version = "1.0.0"
+description = "Data acquisition + spatial merging pipeline for forecasting water stress in Surrey's Green Infrastructure Network corridors"
+requires-python = ">=3.11"
+dependencies = [
+    # --- Vector ---
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pyogrio>=0.9",        # fast vector I/O (GeoPackage/GeoJSON), replaces fiona
+    "pyproj>=3.6",         # CRS transforms
+    # --- Raster ---
+    "rasterio>=1.3",
+    "rioxarray>=0.15",
+    "xarray>=2024.0",
+    "numpy>=1.26",
+    # --- Zonal stats (raster x polygon aggregation) ---
+    "exactextract>=0.2",   # exact-fraction zonal stats; preferred over rasterstats
+    # --- STAC / satellite acquisition ---
+    "pystac-client>=0.8",
+    "planetary-computer>=1.0",
+    "odc-stac>=0.3",       # STAC items -> analysis-ready xarray (lazy, dask-backed)
+    # --- HTTP / API fetching ---
+    "httpx>=0.27",
+    "requests>=2.32",
+    # --- ML baseline (Phase 3) ---
+    "scikit-learn>=1.4",
+    "pandas>=2.2",
+    "pyarrow>=16.0",       # parquet I/O for the Phase 3 feature table
+    # --- Statistics and figures ---
+    # scipy arrives transitively via scikit-learn, pandas, xarray and geopandas,
+    # but eleven modules import it by name, so it is declared rather than
+    # borrowed from a dependency that could drop it.
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    # --- PDF text extraction ---
+    # Only parse_appendix_j.py needs this, and NOTHING else pulls it in. Without
+    # it that script dies on a bare ModuleNotFoundError, and it is the script
+    # that re-verifies the GIN corridor id key against the City's Appendix J.
+    "pypdfium2>=4.30",
+]
+
+[project.optional-dependencies]
+# Google Earth Engine path (alternative to Planetary Computer)
+gee = ["earthengine-api>=1.0", "geemap>=0.32"]
+dev = ["jupyterlab", "notebook", "ipykernel", "nbformat", "ruff", "pytest", "matplotlib", "mapclassify", "folium"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# The import root is literally `src`, not `pipeline` — every module, notebook
+# and CLI invocation already says `src.pipeline.<name>`, and renaming it would
+# break the Phase 2 notebook for no gain. Declaring it here is what makes
+# `pip install -e .` register the package, so imports resolve from any working
+# directory instead of only from the repo root.
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+[tool.ruff]
+line-length = 100
+
+# The walkthrough notebooks are deliberately written in notebook idiom: imports
+# next to the cell that needs them, and `plt.tight_layout(); plt.show()` on one
+# line so a display incantation does not take two lines of a teaching cell.
+# Enforcing module conventions on them would make them worse to read, so the
+# relevant rules are switched off there rather than left failing.
+[tool.ruff.lint.per-file-ignores]
+"notebooks/*.ipynb" = [
+    "E401",  # multiple imports on one line
+    "E402",  # module-level import not at top of file
+    "E701",  # multiple statements on one line (colon)
+    "E702",  # multiple statements on one line (semicolon)
+    "E703",  # statement ends with a semicolon
+    "E741",  # ambiguous variable name (l, I, O) — fine for a plotting loop
+    "F401",  # imported but unused — cells are run out of order
+]
